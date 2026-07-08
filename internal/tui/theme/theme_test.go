@@ -1,5 +1,4 @@
 package theme
-package theme
 
 import (
 	"strings"

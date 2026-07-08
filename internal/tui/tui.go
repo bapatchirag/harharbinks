@@ -1,4 +1,3 @@
-package tui
 // Package tui defines the format-agnostic foundation shared by every
 // harharbinks screen: the core component contracts. It is deliberately tiny and
 // depends only on Bubble Tea so that the theme, keymap, layout, focus, and

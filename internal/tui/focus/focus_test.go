@@ -1,5 +1,4 @@
 package focus
-package focus
 
 import (
 	"testing"

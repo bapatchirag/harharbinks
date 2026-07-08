@@ -1,4 +1,3 @@
-package keymap
 // Package keymap defines the shared key bindings used across harharbinks
 // screens. Centralizing bindings keeps navigation consistent between the HAR,
 // PCAP, and audit views and lets help text be generated from a single source.

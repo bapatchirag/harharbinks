@@ -1,5 +1,4 @@
 package keymap
-package keymap
 
 import "testing"
 

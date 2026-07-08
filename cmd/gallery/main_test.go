@@ -1,4 +1,3 @@
-package gallery
 package main
 
 import (

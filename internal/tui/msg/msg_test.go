@@ -1,5 +1,4 @@
 package msg
-package msg
 
 import "testing"
 

@@ -1,4 +1,3 @@
-package theme
 // Package theme centralizes the harharbinks color palette and derived lipgloss
 // styles. A Theme is a plain, copyable value injected into components so that
 // styling stays swappable and defined in exactly one place. It is format

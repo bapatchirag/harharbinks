@@ -1,4 +1,3 @@
-package focus
 // Package focus manages input focus across a set of Focusable components. A
 // Manager keeps an ordered ring of components and guarantees that exactly one is
 // focused at a time, cycling with Next and Prev (typically bound to Tab and

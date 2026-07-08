@@ -1,5 +1,4 @@
 package layout
-package layout
 
 import "testing"
 

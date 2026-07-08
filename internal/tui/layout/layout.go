@@ -1,4 +1,3 @@
-package layout
 // Package layout provides format-agnostic composition helpers: stacking panes,
 // wrapping content in borders, and compositing one rendered view over another
 // (used for modal overlays and toasts). Helpers operate on already-rendered

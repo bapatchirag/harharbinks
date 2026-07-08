@@ -1,4 +1,3 @@
-package msg
 // Package msg defines the decoupled Bubble Tea messages that components emit and
 // screens consume. Routing communication through shared message types keeps
 // components independent of one another and of the application layer: a
