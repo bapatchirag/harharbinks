@@ -1,0 +1,19 @@
+Entry 3
+  Method:    GET
+  URL:       https://cdn.example.com/logo.png
+  Status:    200 OK
+  HTTP:      HTTP/2.0
+  Server IP: 198.51.100.7
+  Time:      45ms
+  Size:      68B
+
+Request Headers
+  Host: cdn.example.com
+  Accept: image/png,image/*
+
+Response Headers
+  Content-Type: image/png
+  Content-Length: 68
+
+Response Body (image/png, 68B)
+  [binary data, 70 bytes]

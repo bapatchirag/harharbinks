@@ -1,0 +1,70 @@
+{
+  "pageref": "page_1",
+  "startedDateTime": "2026-07-08T10:00:00.300Z",
+  "time": 210,
+  "request": {
+    "method": "POST",
+    "url": "https://api.example.com/login",
+    "httpVersion": "HTTP/1.1",
+    "headers": [
+      {
+        "name": "Host",
+        "value": "api.example.com"
+      },
+      {
+        "name": "Content-Type",
+        "value": "application/json"
+      }
+    ],
+    "queryString": [],
+    "cookies": [],
+    "postData": {
+      "mimeType": "application/json",
+      "text": "{\"username\":\"ada\",\"password\":\"s3cr3t\"}"
+    },
+    "headersSize": 120,
+    "bodySize": 38
+  },
+  "response": {
+    "status": 200,
+    "statusText": "OK",
+    "httpVersion": "HTTP/1.1",
+    "headers": [
+      {
+        "name": "Content-Type",
+        "value": "application/json"
+      },
+      {
+        "name": "Set-Cookie",
+        "value": "session=xyz789; HttpOnly; Path=/"
+      }
+    ],
+    "cookies": [
+      {
+        "name": "session",
+        "value": "xyz789",
+        "path": "/",
+        "httpOnly": true
+      }
+    ],
+    "content": {
+      "size": 33,
+      "mimeType": "application/json",
+      "text": "{\"token\":\"jwt.header.payload.sig\"}"
+    },
+    "redirectURL": "",
+    "headersSize": 140,
+    "bodySize": 33
+  },
+  "timings": {
+    "blocked": 0.5,
+    "dns": 0,
+    "connect": 0,
+    "send": 1,
+    "wait": 205,
+    "receive": 3.5,
+    "ssl": -1
+  },
+  "serverIPAddress": "203.0.113.10",
+  "connection": "443"
+}

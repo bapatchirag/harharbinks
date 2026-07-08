@@ -1,5 +1,4 @@
 package cli
-package cli
 
 import (
 	"bytes"
