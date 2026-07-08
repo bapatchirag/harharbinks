@@ -34,7 +34,7 @@ func NewFileBrowser(th theme.Theme, allowed []string) *FileBrowser {
 }
 
 // SetSize sets the number of file rows shown (the width is managed internally).
-func (f *FileBrowser) SetSize(_, h int) { f.fp.Height = h }
+func (f *FileBrowser) SetSize(_, h int) { f.fp.SetHeight(h) }
 
 // Selected returns the most recently chosen file path, if any.
 func (f *FileBrowser) Selected() string { return f.selected }
