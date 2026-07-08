@@ -1,4 +1,3 @@
-package main
 // Command hhb is the harharbinks command-line entry point. The binary is named
 // "hhb" for brevity, but all help and version output refers to the product by
 // its full name, "harharbinks".

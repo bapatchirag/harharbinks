@@ -1,0 +1,43 @@
+Entry 1
+  Method:    GET
+  URL:       https://api.example.com/users?page=2&limit=20
+  Status:    200 OK
+  HTTP:      HTTP/1.1
+  Server IP: 203.0.113.10
+  Time:      132ms
+  Size:      78B
+
+Request Headers
+  Host: api.example.com
+  Accept: application/json
+  User-Agent: SampleBrowser/120.0
+
+Query String
+  page = 2
+  limit = 20
+
+Request Cookies
+  session = abc123
+
+Response Headers
+  Content-Type: application/json
+  Cache-Control: no-cache
+  Set-Cookie: last_seen=1720432800; Path=/
+
+Response Cookies
+  last_seen = 1720432800
+
+Response Body (application/json, 78B)
+  {
+    "users": [
+      {
+        "id": 11,
+        "name": "Ada"
+      },
+      {
+        "id": 12,
+        "name": "Alan"
+      }
+    ],
+    "page": 2
+  }

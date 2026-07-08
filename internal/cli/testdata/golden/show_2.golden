@@ -1,0 +1,30 @@
+Entry 2
+  Method:    POST
+  URL:       https://api.example.com/login
+  Status:    200 OK
+  HTTP:      HTTP/1.1
+  Server IP: 203.0.113.10
+  Time:      210ms
+  Size:      33B
+
+Request Headers
+  Host: api.example.com
+  Content-Type: application/json
+
+Request Body (application/json)
+  {
+    "username": "ada",
+    "password": "s3cr3t"
+  }
+
+Response Headers
+  Content-Type: application/json
+  Set-Cookie: session=xyz789; HttpOnly; Path=/
+
+Response Cookies
+  session = xyz789
+
+Response Body (application/json, 33B)
+  {
+    "token": "jwt.header.payload.sig"
+  }

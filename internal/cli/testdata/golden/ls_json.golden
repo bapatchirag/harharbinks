@@ -1,0 +1,29 @@
+[
+  {
+    "index": 1,
+    "method": "GET",
+    "status": 200,
+    "mimeType": "application/json",
+    "size": 78,
+    "time": 132,
+    "url": "https://api.example.com/users?page=2&limit=20"
+  },
+  {
+    "index": 2,
+    "method": "POST",
+    "status": 200,
+    "mimeType": "application/json",
+    "size": 33,
+    "time": 210,
+    "url": "https://api.example.com/login"
+  },
+  {
+    "index": 3,
+    "method": "GET",
+    "status": 200,
+    "mimeType": "image/png",
+    "size": 68,
+    "time": 45,
+    "url": "https://cdn.example.com/logo.png"
+  }
+]

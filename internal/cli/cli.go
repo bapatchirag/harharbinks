@@ -1,8 +1,7 @@
-package cli
 // Package cli parses command-line arguments for harharbinks and dispatches to
-// the requested mode. Later milestones add the headless subcommands (ls, show,
-// curl) and the interactive TUI; this skeleton handles --version and help so the
-// hhb binary is runnable and testable from day one.
+// the requested mode. It handles --version and help plus the headless
+// subcommands (ls, show, curl); the interactive TUI is added in a later
+// milestone.
 package cli
 
 import (
@@ -24,6 +23,19 @@ func Run(args []string, version string) int {
 
 // run is the testable core of Run with explicit output streams.
 func run(args []string, version string, stdout, stderr io.Writer) int {
+	// Dispatch headless subcommands before top-level flag parsing so that their
+	// own flags (e.g. --sort) are not intercepted here.
+	if len(args) > 0 {
+		switch args[0] {
+		case "ls":
+			return cmdLs(args[1:], stdout, stderr)
+		case "show":
+			return cmdShow(args[1:], stdout, stderr)
+		case "curl":
+			return cmdCurl(args[1:], stdout, stderr)
+		}
+	}
+
 	fs := flag.NewFlagSet("hhb", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	// Usage is rendered explicitly below so we control which stream it targets.
@@ -46,7 +58,13 @@ func run(args []string, version string, stdout, stderr io.Writer) int {
 		return 0
 	}
 
-	// P0 skeleton: subcommands and the TUI are not wired up yet.
+	// A bare non-flag argument is treated as a HAR file for the interactive
+	// viewer, which is added in a later milestone.
+	if fs.NArg() > 0 {
+		fmt.Fprintln(stderr, "the interactive viewer is not implemented yet; use 'hhb ls <file>'")
+		return 1
+	}
+
 	writeUsage(stdout)
 	return 0
 }
