@@ -21,3 +21,7 @@ go.work.sum
 # Local environment
 .env
 .env.*
+
+# Local working docs (session-local, not tracked)
+/plan.md
+/log.md
