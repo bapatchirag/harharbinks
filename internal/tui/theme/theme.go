@@ -28,21 +28,86 @@ type Theme struct {
 	Info    lipgloss.Color
 }
 
-// Default returns the standard dark harharbinks theme.
+// Default returns the active harharbinks theme. Swap the returned palette to
+// experiment; the named palettes are defined just below and share the same
+// derived styles.
 func Default() Theme {
+	return Kanagawa()
+}
+
+// Gruvbox returns a Gruvbox-inspired palette — warm, retro earth tones on a soft
+// dark base.
+func Gruvbox() Theme {
 	return Theme{
-		Name:      "harharbinks-dark",
-		Primary:   lipgloss.Color("#7D56F4"),
-		Secondary: lipgloss.Color("#43BF6D"),
-		Fg:        lipgloss.Color("#DDDDDD"),
-		Muted:     lipgloss.Color("#7A7A7A"),
-		Bg:        lipgloss.Color("#1A1A1A"),
-		Subtle:    lipgloss.Color("#2A2A2A"),
-		Border:    lipgloss.Color("#4A4A4A"),
-		Success:   lipgloss.Color("#43BF6D"),
-		Warning:   lipgloss.Color("#D7AF00"),
-		Error:     lipgloss.Color("#FF5F5F"),
-		Info:      lipgloss.Color("#5FAFFF"),
+		Name:      "harharbinks-gruvbox",
+		Primary:   lipgloss.Color("#fe8019"), // orange
+		Secondary: lipgloss.Color("#8ec07c"), // aqua
+		Fg:        lipgloss.Color("#ebdbb2"), // fg1
+		Muted:     lipgloss.Color("#928374"), // gray
+		Bg:        lipgloss.Color("#282828"), // bg0
+		Subtle:    lipgloss.Color("#3c3836"), // bg1 (headers, bars)
+		Border:    lipgloss.Color("#665c54"), // bg3
+		Success:   lipgloss.Color("#b8bb26"), // green
+		Warning:   lipgloss.Color("#fabd2f"), // yellow
+		Error:     lipgloss.Color("#fb4934"), // red
+		Info:      lipgloss.Color("#83a598"), // blue
+	}
+}
+
+// Everforest returns an Everforest-inspired palette — soft, green-leaning forest
+// tones at an even lower contrast than Gruvbox.
+func Everforest() Theme {
+	return Theme{
+		Name:      "harharbinks-everforest",
+		Primary:   lipgloss.Color("#e69875"), // orange
+		Secondary: lipgloss.Color("#83c092"), // aqua
+		Fg:        lipgloss.Color("#d3c6aa"), // fg
+		Muted:     lipgloss.Color("#859289"), // grey
+		Bg:        lipgloss.Color("#2d353b"), // bg0
+		Subtle:    lipgloss.Color("#3d484d"), // bg2 (headers, bars)
+		Border:    lipgloss.Color("#475258"), // bg5
+		Success:   lipgloss.Color("#a7c080"), // green
+		Warning:   lipgloss.Color("#dbbc7f"), // yellow
+		Error:     lipgloss.Color("#e67e80"), // red
+		Info:      lipgloss.Color("#7fbbb3"), // blue
+	}
+}
+
+// Kanagawa returns a Kanagawa-inspired palette — muted Hokusai wave tones on a
+// deep indigo-black base.
+func Kanagawa() Theme {
+	return Theme{
+		Name:      "harharbinks-kanagawa",
+		Primary:   lipgloss.Color("#ffa066"), // surimi orange
+		Secondary: lipgloss.Color("#7aa89f"), // wave aqua
+		Fg:        lipgloss.Color("#dcd7ba"), // fuji white
+		Muted:     lipgloss.Color("#727169"), // fuji gray
+		Bg:        lipgloss.Color("#1f1f28"), // sumi ink
+		Subtle:    lipgloss.Color("#363646"), // sumi ink 3 (headers, bars)
+		Border:    lipgloss.Color("#54546d"), // sumi ink 4
+		Success:   lipgloss.Color("#98bb6c"), // spring green
+		Warning:   lipgloss.Color("#e6c384"), // carp yellow
+		Error:     lipgloss.Color("#c34043"), // autumn red
+		Info:      lipgloss.Color("#7e9cd8"), // crystal blue
+	}
+}
+
+// Zenburn returns a Zenburn-inspired palette — low-contrast warm greys on a
+// lighter base for a soft, easy-on-the-eyes look.
+func Zenburn() Theme {
+	return Theme{
+		Name:      "harharbinks-zenburn",
+		Primary:   lipgloss.Color("#dfaf8f"), // warm tan
+		Secondary: lipgloss.Color("#8cd0d3"), // cyan
+		Fg:        lipgloss.Color("#dcdccc"), // fg
+		Muted:     lipgloss.Color("#989890"), // grey
+		Bg:        lipgloss.Color("#3f3f3f"), // bg
+		Subtle:    lipgloss.Color("#4f4f4f"), // lighter bg (headers, bars)
+		Border:    lipgloss.Color("#6f6f6f"), // border
+		Success:   lipgloss.Color("#8fb28f"), // green
+		Warning:   lipgloss.Color("#f0dfaf"), // yellow
+		Error:     lipgloss.Color("#cc9393"), // red
+		Info:      lipgloss.Color("#94bff3"), // blue
 	}
 }
 
@@ -61,9 +126,10 @@ func (t Theme) MutedText() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(t.Muted)
 }
 
-// Selected styles the highlighted row/item in a list or table.
+// Selected styles the highlighted row/item in a list or table. It paints the
+// dark base over the accent so the highlight stays legible on a light accent.
 func (t Theme) Selected() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(t.Fg).Background(t.Primary).Bold(true)
+	return lipgloss.NewStyle().Foreground(t.Bg).Background(t.Primary).Bold(true)
 }
 
 // Header styles a table header row or section header.

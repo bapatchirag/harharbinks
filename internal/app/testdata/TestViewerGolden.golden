@@ -1,0 +1,24 @@
+ harharbinks · sample.har                                                                           
+  METHOD  STATUS TYPE       URL                                            SIZE      TIME           
+  GET     200    json       https://api.example.com/users?page=2           4.0KB     132ms          
+  GET     200    javascript https://cdn.example.com/app.js                 86.1KB    88ms           
+› POST    302    html       https://api.example.com/login                  0B        512ms          
+  GET     404    html       https://example.com/favicon.ico                512B      14ms           
+  DELETE  204    -          https://api.example.com/users/7                0B        1.24s          
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ Detail                                                                                             
+  Method:  POST                                                                                     
+  URL:     https://api.example.com/login                                                            
+  Status:  302 Found                                                                                
+  Type:    text/html                                                                                
+  Size:    0B                                                                                       
+  Time:    512ms                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ 3/5                                         sample.har                           ↑/↓ move · q quit 
