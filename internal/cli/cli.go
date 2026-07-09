@@ -1,7 +1,7 @@
 // Package cli parses command-line arguments for harharbinks and dispatches to
-// the requested mode. It handles --version and help plus the headless
-// subcommands (ls, show, curl); the interactive TUI is added in a later
-// milestone.
+// the requested mode. It handles --version and help, the headless subcommands
+// (ls, show, curl), and launching the interactive TUI viewer for a bare HAR
+// file argument.
 package cli
 
 import (
@@ -58,11 +58,10 @@ func run(args []string, version string, stdout, stderr io.Writer) int {
 		return 0
 	}
 
-	// A bare non-flag argument is treated as a HAR file for the interactive
-	// viewer, which is added in a later milestone.
+	// A bare non-flag argument is treated as a HAR file and opened in the
+	// interactive viewer.
 	if fs.NArg() > 0 {
-		fmt.Fprintln(stderr, "the interactive viewer is not implemented yet; use 'hhb ls <file>'")
-		return 1
+		return launchViewer(fs.Arg(0), stderr)
 	}
 
 	writeUsage(stdout)
