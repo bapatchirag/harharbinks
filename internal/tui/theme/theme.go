@@ -150,3 +150,21 @@ func (t Theme) BorderStyle(focused bool) lipgloss.Style {
 	}
 	return lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(c)
 }
+
+// Key styles the label half of a key/value pair (field names, header keys) as a
+// bold accent so keys stand out from their values.
+func (t Theme) Key() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(t.Secondary).Bold(true)
+}
+
+// TabInactive styles an unselected tab label: a colored foreground on the subtle
+// bar background, so every tab reads as colored rather than greyed out.
+func (t Theme) TabInactive() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(t.Secondary).Background(t.Subtle)
+}
+
+// TabActive styles the selected tab while its pane is unfocused: the primary
+// accent, bold, on the subtle bar background.
+func (t Theme) TabActive() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(t.Primary).Background(t.Subtle).Bold(true)
+}

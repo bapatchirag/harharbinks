@@ -106,3 +106,54 @@ func TestViewerEmpty(t *testing.T) {
 		t.Errorf("empty viewer should indicate no entries; got:\n%s", out)
 	}
 }
+
+// TestFocusToggle verifies Tab moves focus between the list and the detail
+// inspector, changing which pane responds to navigation keys.
+func TestFocusToggle(t *testing.T) {
+	a := newTestApp()
+	var m tea.Model = a
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
+	v := a.screen.(*Viewer)
+
+	if v.detail.Focused() {
+		t.Fatal("detail should start blurred (list focused)")
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if !v.detail.Focused() {
+		t.Fatal("tab should focus the detail inspector")
+	}
+	before := v.detail.Active()
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if v.detail.Active() == before {
+		t.Errorf("right should switch the detail tab while focused")
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if v.detail.Focused() {
+		t.Fatal("tab should return focus to the list")
+	}
+	cur := v.table.Cursor()
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if v.table.Cursor() != cur+1 {
+		t.Errorf("down should move the list selection when focused; cursor=%d want %d", v.table.Cursor(), cur+1)
+	}
+}
+
+// TestHelpOverlay verifies ? opens the help overlay and a dismiss key closes it.
+func TestHelpOverlay(t *testing.T) {
+	a := newTestApp()
+	var m tea.Model = a
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
+
+	if strings.Contains(a.View(), "toggle this help") {
+		t.Fatal("help should be hidden initially")
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+	if !strings.Contains(a.View(), "toggle this help") {
+		t.Errorf("? should open the help overlay")
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if strings.Contains(a.View(), "toggle this help") {
+		t.Errorf("esc should close the help overlay")
+	}
+}

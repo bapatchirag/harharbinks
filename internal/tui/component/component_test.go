@@ -93,6 +93,42 @@ func TestTableGolden(t *testing.T) {
 	golden.RequireEqual(t, []byte(tbl.View()))
 }
 
+// TestTableFlexColumn checks that a Flex column expands to share the table's
+// leftover width, so a long value shows far more than its declared width.
+func TestTableFlexColumn(t *testing.T) {
+	long := "this-is-a-very-long-value-that-should-flex"
+	cols := []Column[string]{
+		{Title: "K", Width: 3, Render: func(string) string { return "k" }},
+		{Title: "V", Width: 4, Flex: true, Render: func(s string) string { return s }},
+	}
+	tbl := NewTable(cols, theme.Default(), keymap.Default())
+	tbl.SetRows([]string{long})
+	tbl.SetSize(40, 3)
+
+	// Flex width = 40 - gutter(2) - separator(1) - K(3) = 34, far past the
+	// declared width of 4, so most of the value is visible.
+	if out := tbl.View(); !strings.Contains(out, long[:30]) {
+		t.Errorf("flex column should expand to show the long value; got:\n%s", out)
+	}
+}
+
+// TestTableColorColumn exercises a per-cell Color on an unselected row: the text
+// still renders correctly (color is stripped under the test's Ascii profile).
+func TestTableColorColumn(t *testing.T) {
+	cols := []Column[string]{
+		{Title: "V", Width: 6,
+			Render: func(s string) string { return s },
+			Color:  func(string) lipgloss.Color { return lipgloss.Color("2") }},
+	}
+	tbl := NewTable(cols, theme.Default(), keymap.Default())
+	tbl.SetRows([]string{"aa", "bb"})
+	tbl.SetSize(20, 4)
+	tbl.Focus() // cursor on row 0; row 1 is unselected so its Color path runs
+	if out := tbl.View(); !strings.Contains(out, "aa") || !strings.Contains(out, "bb") {
+		t.Errorf("colored column should render all rows; got:\n%s", out)
+	}
+}
+
 func TestListGolden(t *testing.T) {
 	l := demoList()
 	l.SetSize(20, 6)
