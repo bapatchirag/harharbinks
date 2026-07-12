@@ -133,7 +133,7 @@ func TestFocusToggle(t *testing.T) {
 		t.Fatal("tab should return focus to the list")
 	}
 	cur := v.table.Cursor()
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
 	if v.table.Cursor() != cur+1 {
 		t.Errorf("down should move the list selection when focused; cursor=%d want %d", v.table.Cursor(), cur+1)
 	}
@@ -152,7 +152,7 @@ func TestHelpOverlay(t *testing.T) {
 	if !strings.Contains(a.View(), "toggle this help") {
 		t.Errorf("? should open the help overlay")
 	}
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	if strings.Contains(a.View(), "toggle this help") {
 		t.Errorf("esc should close the help overlay")
 	}
