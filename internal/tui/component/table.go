@@ -5,6 +5,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/bapatchirag/harharbinks/internal/tui"
 	"github.com/bapatchirag/harharbinks/internal/tui/keymap"
@@ -15,8 +17,17 @@ import (
 // Column describes one column of a Table: a header title, a fixed display width
 // in cells, and a function that renders a row value to that column's cell text.
 type Column[T any] struct {
-	Title  string
-	Width  int
+	Title string
+	Width int
+	// Flex, when true, makes the column expand to share the table's leftover
+	// width instead of using a fixed Width. Width is then only a fallback used
+	// before the table has been sized. Typically the last column flexes so long
+	// values (like URLs) get the remaining space.
+	Flex bool
+	// Color, when set, returns the foreground color for this column's cell in a
+	// given row (an empty color means no override). It applies on unselected
+	// rows; the cursor row keeps a uniform selection highlight.
+	Color  func(T) lipgloss.Color
 	Render func(T) string
 }
 
@@ -121,25 +132,14 @@ func (t *Table[T]) View() string {
 		width = 80
 	}
 	var b strings.Builder
-	b.WriteString(t.theme.Header().Render(pad(gutter+t.rowText(t.columnTitles), width)))
+	widths := t.effectiveWidths()
+	b.WriteString(t.theme.Header().Render(pad(gutter+t.rowText(t.columnTitles, widths), width)))
 
 	vis := t.visible()
 	end := clamp(t.offset+vis, 0, len(t.rows))
 	for i := t.offset; i < end; i++ {
 		b.WriteByte('\n')
-		mark := gutter
-		if i == t.cursor {
-			mark = cursorGutter
-		}
-		line := pad(mark+t.rowText(func(c Column[T]) string { return c.Render(t.rows[i]) }), width)
-		switch {
-		case i == t.cursor && t.focused:
-			b.WriteString(t.theme.Selected().Render(line))
-		case i == t.cursor:
-			b.WriteString(t.theme.Title().Render(line))
-		default:
-			b.WriteString(t.theme.Base().Render(line))
-		}
+		b.WriteString(t.renderRow(i, widths, width))
 	}
 	for i := end - t.offset; i < vis; i++ {
 		b.WriteByte('\n')
@@ -147,20 +147,104 @@ func (t *Table[T]) View() string {
 	return b.String()
 }
 
+// renderRow renders one data row. Each cell (and the gutter, separators, and
+// trailing pad) is rendered with the row's style so a per-column Color composes
+// with the highlight background instead of terminating it with a reset. The
+// cursor row keeps a uniform selection style, ignoring per-column colors.
+func (t *Table[T]) renderRow(i int, widths []int, width int) string {
+	selected := i == t.cursor
+	var rowStyle lipgloss.Style
+	switch {
+	case selected && t.focused:
+		rowStyle = t.theme.Selected()
+	case selected:
+		rowStyle = t.theme.Title()
+	default:
+		rowStyle = t.theme.Base()
+	}
+
+	mark := gutter
+	if selected {
+		mark = cursorGutter
+	}
+
+	var sb strings.Builder
+	sb.WriteString(rowStyle.Render(mark))
+	for j, c := range t.columns {
+		if j > 0 {
+			sb.WriteString(rowStyle.Render(" "))
+		}
+		cell := pad(c.Render(t.rows[i]), widths[j])
+		style := rowStyle
+		if !selected && c.Color != nil {
+			if col := c.Color(t.rows[i]); col != "" {
+				style = rowStyle.Foreground(col)
+			}
+		}
+		sb.WriteString(style.Render(cell))
+	}
+
+	line := sb.String()
+	switch gap := width - ansi.StringWidth(line); {
+	case gap > 0:
+		line += rowStyle.Render(strings.Repeat(" ", gap))
+	case gap < 0:
+		line = ansi.Truncate(line, width, "…")
+	}
+	return line
+}
+
 // columnTitles renders a column's header text (used with rowText).
 func (t *Table[T]) columnTitles(c Column[T]) string { return c.Title }
 
-// rowText assembles one row's cells, padding each to its column width and
+// rowText assembles one row's cells, padding each to its effective width and
 // joining with a single space.
-func (t *Table[T]) rowText(cell func(Column[T]) string) string {
+func (t *Table[T]) rowText(cell func(Column[T]) string, widths []int) string {
 	var sb strings.Builder
 	for i, c := range t.columns {
 		if i > 0 {
 			sb.WriteByte(' ')
 		}
-		sb.WriteString(pad(cell(c), c.Width))
+		sb.WriteString(pad(cell(c), widths[i]))
 	}
 	return sb.String()
+}
+
+// effectiveWidths returns the render width of each column. Fixed columns keep
+// their declared Width; columns marked Flex evenly share the table's remaining
+// width after the gutter, the single-space separators, and the fixed columns.
+// When the table has no width yet, or the leftover space is too tight, the
+// declared widths are returned unchanged.
+func (t *Table[T]) effectiveWidths() []int {
+	widths := make([]int, len(t.columns))
+	fixed, flex := 0, 0
+	for i, c := range t.columns {
+		widths[i] = c.Width
+		if c.Flex {
+			flex++
+		} else {
+			fixed += c.Width
+		}
+	}
+	if flex == 0 || t.width <= 0 {
+		return widths
+	}
+	overhead := ansi.StringWidth(gutter) + (len(t.columns) - 1)
+	remaining := t.width - overhead - fixed
+	if remaining < flex {
+		return widths
+	}
+	each, extra := remaining/flex, remaining%flex
+	for i, c := range t.columns {
+		if c.Flex {
+			widths[i] = each
+			if extra > 0 {
+				widths[i]++
+				extra--
+			}
+		}
+	}
+	return widths
 }
 
 func (t *Table[T]) move(d int) {

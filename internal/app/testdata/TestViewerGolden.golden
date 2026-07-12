@@ -1,24 +1,24 @@
  harharbinks · sample.har                                                                           
-  METHOD  STATUS TYPE       URL                                            SIZE      TIME           
-  GET     200    json       https://api.example.com/users?page=2           4.0KB     132ms          
-  GET     200    javascript https://cdn.example.com/app.js                 86.1KB    88ms           
-› POST    302    html       https://api.example.com/login                  0B        512ms          
-  GET     404    html       https://example.com/favicon.ico                512B      14ms           
-  DELETE  204    -          https://api.example.com/users/7                0B        1.24s          
+  METHOD  STATUS TYPE       SIZE      TIME     URL                                                  
+  GET     200    json       4.0KB     132ms    https://api.example.com/users?page=2                 
+  GET     200    javascript 86.1KB    88ms     https://cdn.example.com/app.js                       
+› POST    302    html       0B        512ms    https://api.example.com/login                        
+  GET     404    html       512B      14ms     https://example.com/favicon.ico                      
+  DELETE  204    -          0B        1.24s    https://api.example.com/users/7                      
                                                                                                     
                                                                                                     
                                                                                                     
- Detail                                                                                             
+ Overview │ Headers │ Cookies │ Payload │ Response │ Raw                                            
   Method:  POST                                                                                     
   URL:     https://api.example.com/login                                                            
   Status:  302 Found                                                                                
-  Type:    text/html                                                                                
-  Size:    0B                                                                                       
+  HTTP:                                                                                             
   Time:    512ms                                                                                    
+  Size:    0B                                                                                       
+  MIME:    text/html                                                                                
                                                                                                     
                                                                                                     
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
- 3/5                                         sample.har                           ↑/↓ move · q quit 
+ 3/5                                         sample.har     ↑/↓ rows · tab detail · ? help · q quit 

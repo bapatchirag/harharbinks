@@ -17,6 +17,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/bapatchirag/harharbinks/internal/tui/keymap"
+	"github.com/bapatchirag/harharbinks/internal/tui/layout"
 	"github.com/bapatchirag/harharbinks/internal/tui/theme"
 )
 
@@ -40,17 +41,21 @@ type Screen interface {
 	SetSize(width, height int)
 	// Title is a short label shown in the app header (e.g. the file name).
 	Title() string
+	// Help returns a multi-line description of the screen's key bindings, shown
+	// in the app's help overlay.
+	Help() string
 }
 
 // App is the root Bubble Tea model. It renders a title header, routes the global
 // quit key, tracks the terminal size, and delegates all other messages to the
-// active Screen.
+// active Screen. It also owns a shared help overlay toggled with "?".
 type App struct {
-	theme  theme.Theme
-	keys   keymap.KeyMap
-	screen Screen
-	width  int
-	height int
+	theme       theme.Theme
+	keys        keymap.KeyMap
+	screen      Screen
+	helpVisible bool
+	width       int
+	height      int
 }
 
 // New returns an App displaying the given initial screen.
@@ -65,8 +70,8 @@ func New(screen Screen) *App {
 // Init implements tea.Model.
 func (a *App) Init() tea.Cmd { return a.screen.Init() }
 
-// Update implements tea.Model. It handles resizing and the global quit key, then
-// forwards every other message to the active screen.
+// Update implements tea.Model. It handles resizing, the help overlay, and the
+// global quit key, then forwards every other message to the active screen.
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -74,21 +79,50 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.layout()
 		return a, nil
 	case tea.KeyMsg:
+		// While the help overlay is open it captures input: any of its dismiss
+		// keys close it, ctrl+c still quits, and everything else is swallowed.
+		if a.helpVisible {
+			if m.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			if key.Matches(m, a.keys.Help, a.keys.Back, a.keys.Enter, a.keys.Quit) {
+				a.helpVisible = false
+			}
+			return a, nil
+		}
 		if key.Matches(m, a.keys.Quit) {
 			return a, tea.Quit
+		}
+		if key.Matches(m, a.keys.Help) {
+			a.helpVisible = true
+			return a, nil
 		}
 	}
 	return a, a.screen.Update(msg)
 }
 
-// View implements tea.Model, stacking the title header over the active screen.
+// View implements tea.Model, stacking the title header over the active screen and
+// compositing the help overlay on top when it is visible.
 func (a *App) View() string {
 	if a.width == 0 || a.height == 0 {
 		return "initializing…"
 	}
 	title := a.theme.Title().Render(fmt.Sprintf(" %s · %s ", productName, a.screen.Title()))
 	header := lipgloss.NewStyle().Width(a.width).Render(title)
-	return lipgloss.JoinVertical(lipgloss.Left, header, a.screen.View())
+	base := lipgloss.JoinVertical(lipgloss.Left, header, a.screen.View())
+	if a.helpVisible {
+		return layout.Center(base, a.helpView())
+	}
+	return base
+}
+
+// helpView renders the centered help overlay box from the active screen's key
+// descriptions. The box sizes itself to its content.
+func (a *App) helpView() string {
+	heading := a.theme.Title().Render(productName + " — keys")
+	body := a.theme.Base().Render(a.screen.Help())
+	content := lipgloss.JoinVertical(lipgloss.Left, heading, "", body)
+	return a.theme.BorderStyle(true).Padding(1, 2).Render(content)
 }
 
 // layout hands the active screen the terminal area below the one-line header.
