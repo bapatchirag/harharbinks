@@ -1,0 +1,24 @@
+ harharbinks · sample.har                                                                              
+  METHOD  STATUS TYPE       SIZE      TIME     URL                                                     
+› GET     200    json       4.0KB     132ms    https://api.example.com/users?page=2                    
+  POST    302    html       0B        512ms    https://api.example.com/login                           
+  DELETE  204    -          0B        1.24s    https://api.example.com/users/7                         
+                                                                                                       
+                                                                                                       
+                                                                                                       
+                                                                                                       
+                                                                                                       
+ Overview │ Headers │ Cookies │ Payload │ Response │ Raw                                               
+  Method:  GET                                                                                         
+  URL:     https://api.example.com/users?page=2                                                        
+  Status:  200 OK                                                                                      
+  HTTP:                                                                                                
+  Server:  93.184.216.34                                                                               
+  Time:    132ms                                                                                       
+  Size:    4.0KB                                                                                       
+  MIME:    application/json                                                                            
+                                                                                                       
+                                                                                                       
+                                                                                                       
+                                                                                                       
+/ api                                                                                                  

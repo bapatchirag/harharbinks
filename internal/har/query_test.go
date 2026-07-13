@@ -1,6 +1,9 @@
 package har
 
-import "testing"
+import (
+	"encoding/base64"
+	"testing"
+)
 
 func TestFilterMethod(t *testing.T) {
 	h := loadSample(t)
@@ -83,5 +86,113 @@ func TestParseSort(t *testing.T) {
 		if tt.ok && (key != tt.key || desc != tt.desc) {
 			t.Errorf("ParseSort(%q) = (%q,%v), want (%q,%v)", tt.in, key, desc, tt.key, tt.desc)
 		}
+	}
+}
+
+func TestContainsMatchesAnyField(t *testing.T) {
+	e := Entry{
+		StartedDateTime: "2026-07-09T12:00:00Z",
+		Connection:      "443",
+		Request: Request{
+			Method:   "POST",
+			URL:      "https://api.example.com/login",
+			Headers:  []NameValue{{Name: "Authorization", Value: "Bearer secrettoken"}},
+			PostData: &PostData{MimeType: "application/json", Text: `{"user":"neo"}`},
+		},
+		Response: Response{
+			Status: 201, StatusText: "Created",
+			Content: Content{MimeType: "application/json", Text: `{"id":42,"role":"admin"}`},
+		},
+		ServerIPAddress: "93.184.216.34",
+	}
+	for _, term := range []string{
+		"post", "LOGIN", "authorization", "bearer secrettoken", "neo",
+		"201", "created", "admin", "role", "93.184.216.34", "443", "json", "2026-07-09",
+	} {
+		if !Contains(e, term) {
+			t.Errorf("Contains(%q) = false, want true", term)
+		}
+	}
+	if Contains(e, "notpresentanywhere") {
+		t.Error(`Contains("notpresentanywhere") = true, want false`)
+	}
+	if !Contains(e, "") {
+		t.Error("empty term should match everything")
+	}
+}
+
+func TestContainsDecodesBody(t *testing.T) {
+	e := Entry{Response: Response{Content: Content{
+		Encoding: "base64",
+		Text:     base64.StdEncoding.EncodeToString([]byte(`{"flag":"needle"}`)),
+	}}}
+	if !Contains(e, "needle") {
+		t.Error("should match text inside a base64-decoded body")
+	}
+}
+
+func TestContainsSkipsBinaryBody(t *testing.T) {
+	e := Entry{Response: Response{Content: Content{
+		MimeType: "image/png",
+		Encoding: "base64",
+		Text:     base64.StdEncoding.EncodeToString([]byte{0x89, 0x50, 0x4e, 0x47, 0x00, 0x01}),
+	}}}
+	if !Contains(e, "png") {
+		t.Error("MIME type should remain searchable")
+	}
+	if Contains(e, "\x89PNG") {
+		t.Error("binary body bytes should not be part of the search text")
+	}
+}
+
+func TestQueryScopedFields(t *testing.T) {
+	entries := []Entry{
+		{
+			Request:  Request{Method: "GET", URL: "https://api.example.com/users"},
+			Response: Response{Status: 200, StatusText: "OK", Content: Content{MimeType: "application/json"}},
+		},
+		{
+			Request:  Request{Method: "POST", URL: "https://api.example.com/login"},
+			Response: Response{Status: 302, StatusText: "Found", Content: Content{MimeType: "text/html", Text: `{"postMessage":true}`}},
+		},
+		{
+			Request:  Request{Method: "GET", URL: "https://cdn.example.com/app.js"},
+			Response: Response{Status: 200, StatusText: "OK", Content: Content{MimeType: "application/javascript", Text: "window.postMessage(1)"}},
+		},
+	}
+	count := func(raw string) int {
+		q := ParseQuery(raw)
+		n := 0
+		for _, e := range entries {
+			if q.Match(e) {
+				n++
+			}
+		}
+		return n
+	}
+	cases := []struct {
+		raw  string
+		want int
+	}{
+		{"method:post", 1},             // scoped to the method field, not bodies
+		{"method:get", 2},              //
+		{"post", 2},                    // free text: POST method + one postMessage body
+		{"status:302", 1},              //
+		{"host:cdn.example.com", 1},    //
+		{"mime:json", 1},               // application/javascript does not contain "json"
+		{"method:get url:cdn", 1},      // conjunctive: only the js file
+		{"https://api.example.com", 2}, // unknown "https" field -> free text (colon-safe)
+		{"", 3},                        // empty query matches everything
+	}
+	for _, c := range cases {
+		if got := count(c.raw); got != c.want {
+			t.Errorf("query %q matched %d entries, want %d", c.raw, got, c.want)
+		}
+	}
+	if !ParseQuery("   ").Empty() {
+		t.Error("blank query should be empty")
+	}
+	if ParseQuery("method:post").Empty() {
+		t.Error("scoped query should not be empty")
 	}
 }

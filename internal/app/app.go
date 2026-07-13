@@ -44,6 +44,12 @@ type Screen interface {
 	// Help returns a multi-line description of the screen's key bindings, shown
 	// in the app's help overlay.
 	Help() string
+	// CapturesInput reports whether the screen is currently consuming all
+	// keystrokes (for example a text field is open). While true, the router
+	// suspends its global key bindings and forwards every key to the screen, so
+	// characters like "q" and "?" reach the field instead of quitting or opening
+	// help.
+	CapturesInput() bool
 }
 
 // App is the root Bubble Tea model. It renders a title header, routes the global
@@ -89,6 +95,15 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.helpVisible = false
 			}
 			return a, nil
+		}
+		// While the active screen captures input (e.g. its search field is open),
+		// forward every key to it. Only the hard interrupt still quits, so keys like
+		// "q" and "?" are typed into the field rather than triggering global actions.
+		if a.screen.CapturesInput() {
+			if m.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			return a, a.screen.Update(msg)
 		}
 		if key.Matches(m, a.keys.Quit) {
 			return a, tea.Quit
