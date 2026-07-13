@@ -236,6 +236,21 @@ func TestMenuWrapsAndEmitsAction(t *testing.T) {
 	}
 }
 
+func TestMenuActivatesByShortcut(t *testing.T) {
+	mn := demoMenu()
+	mn.Focus()
+	// Typing an item's shortcut Key ("b" for Bravo) activates it and moves the
+	// cursor to it, without needing to navigate and press enter.
+	got := single(mn.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}}))
+	act, ok := got.(msg.MenuActionMsg)
+	if !ok || act.Action != "b" {
+		t.Errorf("got %#v, want msg.MenuActionMsg{Action:\"b\"}", got)
+	}
+	if mn.Cursor() != 1 {
+		t.Errorf("shortcut should move the cursor to the item, cursor = %d, want 1", mn.Cursor())
+	}
+}
+
 func TestSearchEmitsSearchMessage(t *testing.T) {
 	s := NewSearch(theme.Default(), "placeholder")
 	s.Focus()

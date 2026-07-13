@@ -76,7 +76,8 @@ func (mn *Menu) Focused() bool { return mn.focused }
 func (mn *Menu) Init() tea.Cmd { return nil }
 
 // Update handles navigation keys while focused and emits msg.MenuActionMsg when
-// an item is activated.
+// an item is activated — by pressing enter on the highlighted item, or by typing
+// an item's shortcut Key.
 func (mn *Menu) Update(tmsg tea.Msg) tea.Cmd {
 	if !mn.focused {
 		return nil
@@ -98,6 +99,19 @@ func (mn *Menu) Update(tmsg tea.Msg) tea.Cmd {
 		if it, ok := mn.Selected(); ok {
 			action := it.Action
 			return func() tea.Msg { return msg.MenuActionMsg{Action: action} }
+		}
+	default:
+		// A single-character key activates the item whose shortcut Key it matches,
+		// so a menu can be driven by mnemonic as well as by the arrow keys plus
+		// enter.
+		if s := k.String(); len(s) == 1 {
+			for i, it := range mn.items {
+				if it.Key == s {
+					mn.cursor = i
+					action := it.Action
+					return func() tea.Msg { return msg.MenuActionMsg{Action: action} }
+				}
+			}
 		}
 	}
 	return nil
