@@ -22,6 +22,8 @@ type KeyMap struct {
 	Tab      key.Binding
 	ShiftTab key.Binding
 	Search   key.Binding
+	Sort     key.Binding
+	SortRev  key.Binding
 	Menu     key.Binding
 	Help     key.Binding
 	Quit     key.Binding
@@ -82,6 +84,14 @@ func Default() KeyMap {
 			key.WithKeys("/"),
 			key.WithHelp("/", "search"),
 		),
+		Sort: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp("s", "sort"),
+		),
+		SortRev: key.NewBinding(
+			key.WithKeys("S"),
+			key.WithHelp("S", "sort (reverse)"),
+		),
 		Menu: key.NewBinding(
 			key.WithKeys(":", "m"),
 			key.WithHelp(":", "menu"),
@@ -110,6 +120,6 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.Left, k.Right},
 		{k.PageUp, k.PageDown, k.Home, k.End},
 		{k.Enter, k.Back, k.Tab, k.ShiftTab},
-		{k.Search, k.Menu, k.Help, k.Quit},
+		{k.Search, k.Sort, k.SortRev, k.Menu, k.Help, k.Quit},
 	}
 }

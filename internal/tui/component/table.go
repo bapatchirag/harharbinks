@@ -63,6 +63,13 @@ func (t *Table[T]) Rows() []T { return t.rows }
 // Cursor returns the index of the highlighted row.
 func (t *Table[T]) Cursor() int { return t.cursor }
 
+// SetCursor moves the highlight to row i, clamping it into range and scrolling
+// it into view. It is a no-op selection change on an empty table.
+func (t *Table[T]) SetCursor(i int) {
+	t.cursor = i
+	t.clampCursor()
+}
+
 // Selected returns the highlighted row and true, or the zero value and false
 // when the table is empty.
 func (t *Table[T]) Selected() (T, bool) {
