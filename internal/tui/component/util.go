@@ -13,10 +13,12 @@ import (
 )
 
 // Selection gutters shown at the start of each row in list-like components, so
-// the cursor is visible even when color is unavailable.
+// the cursor is visible even when color is unavailable. cursorMark is the single
+// pointer glyph; cursorGutter is its full gutter form (mark plus a space).
 const (
 	gutter       = "  "
-	cursorGutter = "› "
+	cursorMark   = "›"
+	cursorGutter = cursorMark + " "
 )
 
 // pad truncates s (with an ellipsis) or right-pads it with spaces so the result
