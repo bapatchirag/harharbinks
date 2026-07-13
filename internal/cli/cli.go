@@ -64,8 +64,9 @@ func run(args []string, version string, stdout, stderr io.Writer) int {
 		return launchViewer(fs.Arg(0), stderr)
 	}
 
-	writeUsage(stdout)
-	return 0
+	// No file and no subcommand: open the interactive file browser so the user
+	// can pick a capture. Help remains available via --help/-h.
+	return launchBrowser(stderr)
 }
 
 // writeUsage prints the harharbinks help text. The synopsis lines show the real
@@ -75,6 +76,7 @@ func writeUsage(w io.Writer) {
 	fmt.Fprintf(w, `%s — an offline HAR file viewer TUI
 
 Usage:
+  hhb                       Open the interactive file browser to pick a HAR file
   hhb [file.har]            Open a HAR file in the interactive viewer
   hhb <command> [args]      Run a headless command
 
@@ -82,6 +84,9 @@ Commands:
   ls    [file]              List HAR entries
   show  <index> [file]      Show details for a single entry
   curl  <index> [file]      Print an entry as a cURL command
+
+Headless commands read the HAR from the [file] argument, or from stdin when it
+is omitted (e.g. hhb ls < file.har). One of the two is required.
 
 Flags:
   --version                 Print the %s version and exit

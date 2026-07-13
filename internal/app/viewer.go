@@ -146,6 +146,7 @@ func (v *Viewer) Help() string {
 		"                               mime body query server conn",
 		"  s / S              cycle sort forward / reverse",
 		"  enter              follow session (esc to leave)",
+		"  o                  open another file",
 		"",
 		"Detail focused",
 		"  left/right, h/l    previous / next tab",
@@ -197,6 +198,9 @@ func (v *Viewer) handleKey(k tea.KeyMsg) tea.Cmd {
 		v.focus.Prev()
 		v.refreshStatus()
 		return nil
+	case key.Matches(k, v.keys.Open):
+		// Open the file browser to switch captures; esc there returns here.
+		return SwitchTo(NewBrowserReturning(v))
 	}
 	if v.detail.Focused() {
 		v.detail.HandleKey(k)
@@ -462,7 +466,7 @@ func (v *Viewer) refreshStatus() {
 		if v.query != "" {
 			parts = append([]string{"esc clear"}, parts...)
 		}
-		parts = append(parts, "tab detail", "? help")
+		parts = append(parts, "o open", "tab detail", "? help")
 		v.status.SetRight(" " + strings.Join(parts, " \u00b7 ") + " ")
 	}
 }

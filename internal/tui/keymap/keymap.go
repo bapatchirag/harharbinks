@@ -24,6 +24,7 @@ type KeyMap struct {
 	Search   key.Binding
 	Sort     key.Binding
 	SortRev  key.Binding
+	Open     key.Binding
 	Menu     key.Binding
 	Help     key.Binding
 	Quit     key.Binding
@@ -91,6 +92,10 @@ func Default() KeyMap {
 		SortRev: key.NewBinding(
 			key.WithKeys("S"),
 			key.WithHelp("S", "sort (reverse)"),
+		),
+		Open: key.NewBinding(
+			key.WithKeys("o"),
+			key.WithHelp("o", "open file"),
 		),
 		Menu: key.NewBinding(
 			key.WithKeys(":", "m"),

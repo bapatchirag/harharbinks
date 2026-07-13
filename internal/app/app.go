@@ -25,6 +25,18 @@ import (
 // binary is "hhb", but the product is always referred to as "harharbinks".
 const productName = "harharbinks"
 
+// SwitchScreenMsg asks the App router to replace the active screen with Screen.
+// A screen requests a transition by returning the SwitchTo command; the router
+// sizes and initializes the new screen when it handles this message.
+type SwitchScreenMsg struct{ Screen Screen }
+
+// SwitchTo returns a command that asks the App to make s the active screen. It
+// is how one screen hands off to another (e.g. the file browser opening a
+// selected capture in the viewer).
+func SwitchTo(s Screen) tea.Cmd {
+	return func() tea.Msg { return SwitchScreenMsg{Screen: s} }
+}
+
 // Screen is one full-window view managed by the App router. Screens share the
 // component lifecycle (Init/Update/View) plus sizing, and expose a short Title
 // for the shared header. The App gives each Screen the whole terminal area below
@@ -84,6 +96,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.width, a.height = m.Width, m.Height
 		a.layout()
 		return a, nil
+	case SwitchScreenMsg:
+		// A screen handed off to another (e.g. the browser opened a capture).
+		// Adopt it, drop any help overlay, size it to the current terminal, and
+		// run its Init so it can start any commands (directory reads, etc.).
+		a.screen = m.Screen
+		a.helpVisible = false
+		if a.width > 0 && a.height > 0 {
+			a.layout()
+		}
+		return a, a.screen.Init()
 	case tea.KeyMsg:
 		// While the help overlay is open it captures input: any of its dismiss
 		// keys close it, ctrl+c still quits, and everything else is swallowed.
