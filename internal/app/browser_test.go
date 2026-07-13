@@ -39,7 +39,7 @@ func TestBrowserOpensViewerOnSelect(t *testing.T) {
 	}
 
 	// Feed the switch back through the router and confirm the active screen changed.
-	m, _ = m.Update(sw)
+	_, _ = m.Update(sw)
 	if _, ok := a.screen.(*Viewer); !ok {
 		t.Errorf("router should now show the viewer, got %T", a.screen)
 	}
