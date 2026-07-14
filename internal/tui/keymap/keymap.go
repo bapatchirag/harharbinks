@@ -98,8 +98,8 @@ func Default() KeyMap {
 			key.WithHelp("o", "open file"),
 		),
 		Menu: key.NewBinding(
-			key.WithKeys(":", "m"),
-			key.WithHelp(":", "menu"),
+			key.WithKeys("e"),
+			key.WithHelp("e", "export menu"),
 		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),

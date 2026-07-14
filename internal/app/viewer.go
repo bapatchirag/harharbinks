@@ -36,6 +36,8 @@ type Viewer struct {
 	detail    *Detail
 	status    *component.StatusBar
 	search    *component.Search
+	menu      *component.Menu
+	toast     *component.Toast
 	focus     *focus.Manager
 	entries   []har.Entry
 	order     []int    // table row -> index into entries, for the current view
@@ -47,6 +49,7 @@ type Viewer struct {
 	query     string
 	sortIdx   int
 	searching bool
+	menuOpen  bool
 
 	// Follow-session state: while active the table shows one session's exchanges.
 	sessionMode   bool
@@ -107,6 +110,8 @@ func NewViewer(entries []har.Entry, source string) *Viewer {
 		detail:  NewDetail(th, km),
 		status:  component.NewStatusBar(th),
 		search:  component.NewSearch(th, "filter (text or field:value)\u2026"),
+		menu:    newExportMenu(th, km),
+		toast:   component.NewToast(th),
 		entries: entries,
 		title:   title,
 		curIdx:  -1,
@@ -147,6 +152,7 @@ func (v *Viewer) Help() string {
 		"  s / S              cycle sort forward / reverse",
 		"  enter              follow session (esc to leave)",
 		"  o                  open another file",
+		"  e                  export menu (copy URL/cURL, save body)",
 		"",
 		"Detail focused",
 		"  left/right, h/l    previous / next tab",
@@ -158,9 +164,10 @@ func (v *Viewer) Help() string {
 	}, "\n")
 }
 
-// CapturesInput implements Screen: while the filter field is open it consumes
-// every keystroke so characters are typed into the field.
-func (v *Viewer) CapturesInput() bool { return v.searching }
+// CapturesInput implements Screen: while the filter field or the export menu is
+// open it consumes every keystroke so characters are typed into the field and
+// menu navigation is not intercepted by global bindings.
+func (v *Viewer) CapturesInput() bool { return v.searching || v.menuOpen }
 
 // Init implements Screen.
 func (v *Viewer) Init() tea.Cmd { return v.table.Init() }
@@ -174,10 +181,13 @@ func (v *Viewer) Update(tmsg tea.Msg) tea.Cmd {
 		v.query = m.Query
 		v.applyView()
 		return nil
+	case msg.MenuActionMsg:
+		return v.runMenuAction(m.Action)
 	case tea.KeyMsg:
 		return v.handleKey(m)
 	default:
-		return v.table.Update(tmsg)
+		// Forward to the toast (so its auto-dismiss timer fires) and to the table.
+		return tea.Batch(v.toast.Update(tmsg), v.table.Update(tmsg))
 	}
 }
 
@@ -189,7 +199,13 @@ func (v *Viewer) handleKey(k tea.KeyMsg) tea.Cmd {
 	if v.searching {
 		return v.handleSearchKey(k)
 	}
+	if v.menuOpen {
+		return v.handleMenuKey(k)
+	}
 	switch {
+	case key.Matches(k, v.keys.Menu):
+		v.openMenu()
+		return nil
 	case key.Matches(k, v.keys.Tab):
 		v.focus.Next()
 		v.refreshStatus()
@@ -430,13 +446,22 @@ func (v *Viewer) View() string {
 		return ""
 	}
 	bottom := v.status.View()
-	if v.searching {
+	switch {
+	case v.searching:
 		bottom = v.search.View()
+	case v.toast.Visible():
+		bottom = ansi.Truncate(v.toast.View(), v.width, "\u2026")
 	}
-	return layout.SplitVertical(
+	base := layout.SplitVertical(
 		v.table.View(),
 		layout.SplitVertical(v.detail.View(), bottom),
 	)
+	if v.menuOpen {
+		hint := v.theme.MutedText().Render("key or \u2191\u2193+enter \u00b7 esc")
+		box := v.theme.BorderStyle(true).Padding(1, 2).Render(v.menu.View() + "\n\n" + hint)
+		return layout.Center(base, box)
+	}
+	return base
 }
 
 // refreshStatus updates the status bar with the cursor position (over the shown
