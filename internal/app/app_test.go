@@ -184,7 +184,7 @@ func TestSettingsEditorOpens(t *testing.T) {
 	if a.settingsVisible {
 		t.Fatal("settings editor should be hidden initially")
 	}
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
+	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
 	if !a.settingsVisible {
 		t.Fatal("c should open the settings editor")
 	}
