@@ -26,7 +26,7 @@ type KeyMap struct {
 	SortRev  key.Binding
 	Open     key.Binding
 	Menu     key.Binding
-	Theme    key.Binding
+	Config   key.Binding
 	Help     key.Binding
 	Quit     key.Binding
 }
@@ -102,9 +102,9 @@ func Default() KeyMap {
 			key.WithKeys("e"),
 			key.WithHelp("e", "export menu"),
 		),
-		Theme: key.NewBinding(
-			key.WithKeys("t"),
-			key.WithHelp("t", "theme"),
+		Config: key.NewBinding(
+			key.WithKeys("c"),
+			key.WithHelp("c", "config"),
 		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),
@@ -130,6 +130,6 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.Left, k.Right},
 		{k.PageUp, k.PageDown, k.Home, k.End},
 		{k.Enter, k.Back, k.Tab, k.ShiftTab},
-		{k.Search, k.Sort, k.SortRev, k.Menu, k.Theme, k.Help, k.Quit},
+		{k.Search, k.Sort, k.SortRev, k.Menu, k.Config, k.Help, k.Quit},
 	}
 }

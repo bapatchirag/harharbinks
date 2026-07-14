@@ -105,8 +105,8 @@ func NewViewer(entries []har.Entry, source string) *Viewer {
 		curIdx:  -1,
 	}
 	// The METHOD column's color reads v.theme (rather than the construction-time
-	// palette) so the in-app theme selector recolors the column live along with
-	// the rest of the UI.
+	// palette) so the settings editor recolors the column live along with the
+	// rest of the UI.
 	v.table = component.NewTable([]component.Column[har.Entry]{
 		{Title: "METHOD", Width: 7,
 			Render: func(e har.Entry) string { return e.Request.Method },
@@ -167,8 +167,8 @@ func (v *Viewer) Help() string {
 func (v *Viewer) CapturesInput() bool { return v.searching || v.menuOpen }
 
 // SetTheme implements Screen, swapping the viewer's palette at runtime and
-// propagating it to every component so the in-app theme selector recolors the
-// whole screen live.
+// propagating it to every component so the settings editor recolors the whole
+// screen live.
 func (v *Viewer) SetTheme(th theme.Theme) {
 	v.theme = th
 	v.table.SetTheme(th)

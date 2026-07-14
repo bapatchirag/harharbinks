@@ -11,12 +11,12 @@ package app
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/bapatchirag/harharbinks/internal/config"
 	"github.com/bapatchirag/harharbinks/internal/tui/keymap"
 	"github.com/bapatchirag/harharbinks/internal/tui/layout"
 	"github.com/bapatchirag/harharbinks/internal/tui/theme"
@@ -53,8 +53,8 @@ type Screen interface {
 	// SetSize sets the screen's render area in cells.
 	SetSize(width, height int)
 	// SetTheme swaps the screen's palette at runtime, propagating it to every
-	// component the screen owns so the in-app theme selector can recolor the
-	// whole UI live.
+	// component the screen owns so the settings editor can recolor the whole UI
+	// live.
 	SetTheme(theme.Theme)
 	// Title is a short label shown in the app header (e.g. the file name).
 	Title() string
@@ -71,29 +71,61 @@ type Screen interface {
 
 // App is the root Bubble Tea model. It renders a title header, routes the global
 // quit key, tracks the terminal size, and delegates all other messages to the
-// active Screen. It also owns a shared help overlay toggled with "?" and a theme
-// selector toggled with "t".
+// active Screen. It also owns a shared help overlay toggled with "?" and a
+// settings editor toggled with "c".
 type App struct {
-	theme        theme.Theme
-	keys         keymap.KeyMap
-	screen       Screen
-	themes       []theme.Theme
-	themePrev    theme.Theme
-	helpVisible  bool
-	themeVisible bool
-	themeCursor  int
-	width        int
-	height       int
+	theme           theme.Theme
+	keys            keymap.KeyMap
+	screen          Screen
+	cfg             config.Config
+	persist         func(config.Config)
+	settings        *settingsModel
+	helpVisible     bool
+	settingsVisible bool
+	width           int
+	height          int
 }
 
-// New returns an App displaying the given initial screen.
-func New(screen Screen) *App {
-	return &App{
+// Option customizes an App at construction. Options are applied by New in the
+// order given, after the built-in defaults are set.
+type Option func(*App)
+
+// WithConfig seeds the app with a loaded configuration, adopting its persisted
+// values (such as the theme palette) as the starting state so settings from a
+// previous run take effect on the very first frame.
+func WithConfig(c config.Config) Option {
+	return func(a *App) {
+		a.cfg = c
+		if t, ok := theme.ByName(c.Theme); ok {
+			a.theme = t
+		}
+	}
+}
+
+// WithConfigSaver registers a callback the app invokes whenever a configuration
+// field changes in the settings editor, so the change is persisted immediately.
+// It is optional: without a saver, edits apply for the session but do not
+// survive it.
+func WithConfigSaver(save func(config.Config)) Option {
+	return func(a *App) { a.persist = save }
+}
+
+// New returns an App displaying the given initial screen. Options may override
+// defaults such as the starting configuration and install a persistence hook.
+func New(screen Screen, opts ...Option) *App {
+	a := &App{
+		cfg:    config.Default(),
 		theme:  theme.Default(),
 		keys:   keymap.Default(),
 		screen: screen,
-		themes: theme.Themes(),
 	}
+	for _, opt := range opts {
+		opt(a)
+	}
+	// Propagate the (possibly option-overridden) starting palette to the screen so
+	// a restored theme colors the whole UI from the very first frame.
+	a.screen.SetTheme(a.theme)
+	return a
 }
 
 // Init implements tea.Model.
@@ -129,10 +161,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return a, nil
 		}
-		// The theme selector overlay likewise captures input while open: it handles
-		// its own navigation, apply, and close keys.
-		if a.themeVisible {
-			return a, a.handleThemeKey(m)
+		// The settings editor overlay captures input while open: it navigates fields
+		// and categories, edits values, and handles its own close keys.
+		if a.settingsVisible {
+			return a, a.handleSettingsKey(m)
 		}
 		// While the active screen captures input (e.g. its search field is open),
 		// forward every key to it. Only the hard interrupt still quits, so keys like
@@ -150,8 +182,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.helpVisible = true
 			return a, nil
 		}
-		if key.Matches(m, a.keys.Theme) {
-			a.openThemeSelector()
+		if key.Matches(m, a.keys.Config) {
+			a.openSettings()
 			return a, nil
 		}
 	}
@@ -170,61 +202,21 @@ func (a *App) View() string {
 	switch {
 	case a.helpVisible:
 		return layout.Center(base, a.helpView())
-	case a.themeVisible:
-		return layout.Center(base, a.themeView())
+	case a.settingsVisible:
+		return layout.Center(base, a.settingsView())
 	}
 	return base
 }
 
 // helpView renders the centered help overlay box: the active screen's key
-// descriptions above a footer of the app-level keys (theme, help, quit) that
+// descriptions above a footer of the app-level keys (config, help, quit) that
 // work on every screen. The box sizes itself to its content.
 func (a *App) helpView() string {
 	heading := a.theme.Title().Render(productName + " — keys")
 	body := a.theme.Base().Render(a.screen.Help())
-	footer := a.theme.MutedText().Render("t theme · ? help · q quit")
+	footer := a.theme.MutedText().Render("c config · ? help · q quit")
 	content := lipgloss.JoinVertical(lipgloss.Left, heading, "", body, "", footer)
 	return a.theme.BorderStyle(true).Padding(1, 2).Render(content)
-}
-
-// openThemeSelector shows the theme selector overlay, starting the highlight on
-// the palette currently in use and remembering it so a cancel can restore it.
-func (a *App) openThemeSelector() {
-	if len(a.themes) == 0 {
-		return
-	}
-	a.themeVisible = true
-	a.themePrev = a.theme
-	a.themeCursor = 0
-	for i, t := range a.themes {
-		if t.Name == a.theme.Name {
-			a.themeCursor = i
-			break
-		}
-	}
-}
-
-// handleThemeKey routes a key while the theme selector is open. Moving the
-// highlight applies that palette immediately so the whole UI previews live;
-// enter keeps the previewed palette and closes; esc (or t, or q) cancels,
-// restoring the palette that was active when the selector opened. ctrl+c quits.
-func (a *App) handleThemeKey(m tea.KeyMsg) tea.Cmd {
-	switch {
-	case m.Type == tea.KeyCtrlC:
-		return tea.Quit
-	case key.Matches(m, a.keys.Up):
-		a.themeCursor = (a.themeCursor - 1 + len(a.themes)) % len(a.themes)
-		a.applyTheme(a.themes[a.themeCursor])
-	case key.Matches(m, a.keys.Down):
-		a.themeCursor = (a.themeCursor + 1) % len(a.themes)
-		a.applyTheme(a.themes[a.themeCursor])
-	case key.Matches(m, a.keys.Enter):
-		a.themeVisible = false
-	case key.Matches(m, a.keys.Back, a.keys.Theme, a.keys.Quit):
-		a.applyTheme(a.themePrev)
-		a.themeVisible = false
-	}
-	return nil
 }
 
 // applyTheme adopts palette t for the app chrome and propagates it to the active
@@ -234,28 +226,69 @@ func (a *App) applyTheme(t theme.Theme) {
 	a.screen.SetTheme(t)
 }
 
-// themeView renders the centered theme-selector overlay: the built-in palettes
-// as a highlightable list, the active one highlighted, above a key hint.
-func (a *App) themeView() string {
-	heading := a.theme.Title().Render(productName + " — theme")
-	width := 0
-	for _, t := range a.themes {
-		if w := len([]rune(t.DisplayName())); w > width {
-			width = w
+// openSettings shows the configuration editor overlay, seeded with the current
+// settings so edits build on the live values.
+func (a *App) openSettings() {
+	a.settings = newSettings(a.cfg)
+	a.settingsVisible = true
+}
+
+// handleSettingsKey routes a key while the settings editor is open: navigating
+// fields (up/down) and categories (tab/shift+tab), cycling the highlighted
+// field's value (left/right) — which applies and persists immediately — and
+// closing the overlay (esc/c/q). ctrl+c still quits.
+func (a *App) handleSettingsKey(m tea.KeyMsg) tea.Cmd {
+	if m.Type == tea.KeyCtrlC {
+		return tea.Quit
+	}
+	switch {
+	case key.Matches(m, a.keys.Up):
+		a.settings.moveCursor(-1)
+	case key.Matches(m, a.keys.Down):
+		a.settings.moveCursor(1)
+	case key.Matches(m, a.keys.Left):
+		if a.settings.cycleValue(-1) {
+			a.applyConfig(a.settings.cfg)
+		}
+	case key.Matches(m, a.keys.Right):
+		if a.settings.cycleValue(1) {
+			a.applyConfig(a.settings.cfg)
+		}
+	case key.Matches(m, a.keys.Tab):
+		a.settings.switchTab(1)
+	case key.Matches(m, a.keys.ShiftTab):
+		a.settings.switchTab(-1)
+	case key.Matches(m, a.keys.Back, a.keys.Config, a.keys.Quit):
+		a.settingsVisible = false
+	}
+	return nil
+}
+
+// applyConfig adopts the edited configuration c: it stores it, recolors the UI
+// live when the theme changed, and persists the result so on-the-fly edits are
+// saved immediately.
+func (a *App) applyConfig(c config.Config) {
+	prev := a.cfg
+	a.cfg = c
+	if c.Theme != prev.Theme {
+		if t, ok := theme.ByName(c.Theme); ok {
+			a.applyTheme(t)
 		}
 	}
-	lines := make([]string, len(a.themes))
-	for i, t := range a.themes {
-		label := padTo(t.DisplayName(), width)
-		if i == a.themeCursor {
-			lines[i] = a.theme.Selected().Render(" \u203a " + label + " ")
-		} else {
-			lines[i] = a.theme.Base().Render("   " + label + " ")
-		}
+	a.persistConfig()
+}
+
+// persistConfig writes the current configuration through the saver hook when one
+// is installed. It is best-effort: persistence never blocks the UI.
+func (a *App) persistConfig() {
+	if a.persist != nil {
+		a.persist(a.cfg)
 	}
-	hint := a.theme.MutedText().Render("\u2191/\u2193 preview \u00b7 enter apply \u00b7 esc cancel")
-	content := lipgloss.JoinVertical(lipgloss.Left, heading, "", strings.Join(lines, "\n"), "", hint)
-	return a.theme.BorderStyle(true).Padding(1, 2).Render(content)
+}
+
+// settingsView renders the configuration editor overlay for the current frame.
+func (a *App) settingsView() string {
+	return a.settings.view(a.theme, a.width, a.height)
 }
 
 // layout hands the active screen the terminal area below the one-line header.
@@ -268,9 +301,16 @@ func (a *App) layout() {
 }
 
 // Run starts a Bubble Tea program showing the given screen full-screen. It is
-// the production entry point used by the CLI; tests drive the model directly.
+// the production entry point used by the CLI; tests drive the model directly. It
+// restores the persisted configuration (theme palette and future settings) and
+// persists any change made in the settings editor, so choices survive across
+// launches.
 func Run(screen Screen) error {
-	_, err := tea.NewProgram(New(screen), tea.WithAltScreen()).Run()
+	opts := []Option{
+		WithConfig(config.Load()),
+		WithConfigSaver(func(c config.Config) { _ = config.Save(c) }),
+	}
+	_, err := tea.NewProgram(New(screen, opts...), tea.WithAltScreen()).Run()
 	return err
 }
 

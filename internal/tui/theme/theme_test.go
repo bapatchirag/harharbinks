@@ -50,7 +50,7 @@ func TestThemes(t *testing.T) {
 	}
 }
 
-// TestDisplayName checks the human-facing name derived for the theme selector.
+// TestDisplayName checks the human-facing name shown when choosing a theme.
 func TestDisplayName(t *testing.T) {
 	want := map[string]string{
 		"harharbinks-kanagawa":   "Kanagawa",
@@ -61,6 +61,26 @@ func TestDisplayName(t *testing.T) {
 	for _, th := range Themes() {
 		if got := th.DisplayName(); got != want[th.Name] {
 			t.Errorf("%s DisplayName() = %q, want %q", th.Name, got, want[th.Name])
+		}
+	}
+}
+
+// TestByName checks that every built-in palette round-trips through its Name and
+// that unknown or empty names report no match so callers fall back to Default.
+func TestByName(t *testing.T) {
+	for _, want := range Themes() {
+		got, ok := ByName(want.Name)
+		if !ok {
+			t.Errorf("ByName(%q) reported no match", want.Name)
+			continue
+		}
+		if got.Name != want.Name {
+			t.Errorf("ByName(%q) = %q, want %q", want.Name, got.Name, want.Name)
+		}
+	}
+	for _, name := range []string{"", "nope", "kanagawa"} {
+		if got, ok := ByName(name); ok {
+			t.Errorf("ByName(%q) = %q, ok; want no match", name, got.Name)
 		}
 	}
 }

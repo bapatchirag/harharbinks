@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/bapatchirag/harharbinks/internal/config"
 )
 
 // ProductName is the human-facing name shown in help and version output. The
@@ -23,6 +25,11 @@ func Run(args []string, version string) int {
 
 // run is the testable core of Run with explicit output streams.
 func run(args []string, version string, stdout, stderr io.Writer) int {
+	// Keep a configuration file present and current on every launch, headless or
+	// TUI. This is best-effort: a read-only or unavailable config location must not
+	// stop any command from running.
+	_, _ = config.Ensure()
+
 	// Dispatch headless subcommands before top-level flag parsing so that their
 	// own flags (e.g. --sort) are not intercepted here.
 	if len(args) > 0 {

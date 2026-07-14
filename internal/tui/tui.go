@@ -41,8 +41,8 @@ type Focusable interface {
 }
 
 // Themeable is implemented by components whose palette can be swapped at runtime.
-// The in-app theme selector propagates a new theme.Theme to every component so
-// the whole UI recolors live, mirroring how Sizeable lets the layout resize them.
+// The settings editor propagates a new theme.Theme to every component so the
+// whole UI recolors live, mirroring how Sizeable lets the layout resize them.
 type Themeable interface {
 	SetTheme(theme.Theme)
 }
