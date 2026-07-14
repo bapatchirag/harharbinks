@@ -11,7 +11,9 @@ import (
 	"github.com/charmbracelet/x/exp/teatest"
 	"github.com/muesli/termenv"
 
+	"github.com/bapatchirag/harharbinks/internal/config"
 	"github.com/bapatchirag/harharbinks/internal/har"
+	"github.com/bapatchirag/harharbinks/internal/tui/theme"
 )
 
 // TestMain forces a color-free profile so golden output is deterministic across
@@ -158,73 +160,84 @@ func TestHelpOverlay(t *testing.T) {
 	}
 }
 
-// TestThemeSelector verifies t opens the theme selector, moving the highlight
-// previews the palette live (applying it to the app and its components before
-// enter), enter keeps the previewed palette, and esc cancels a preview by
-// restoring the palette that was active when the selector opened.
-func TestThemeSelector(t *testing.T) {
+// TestWithConfig verifies a persisted configuration restored at construction
+// sets the app's starting theme and is propagated to the screen's components
+// before the first frame, so a saved choice colors the UI immediately on launch.
+func TestWithConfig(t *testing.T) {
+	want := theme.Gruvbox()
+	a := New(NewViewer(demoEntries(), "sample.har"), WithConfig(config.Config{Theme: want.Name}))
+	if a.theme.Name != want.Name {
+		t.Errorf("app theme = %q, want %q", a.theme.Name, want.Name)
+	}
+	if v := a.screen.(*Viewer); v.theme.Name != want.Name {
+		t.Errorf("screen theme = %q, want %q", v.theme.Name, want.Name)
+	}
+}
+
+// TestSettingsEditorOpens verifies c opens the tabbed configuration editor,
+// showing the category tab and the Theme field with its current value.
+func TestSettingsEditorOpens(t *testing.T) {
 	a := newTestApp()
 	var m tea.Model = a
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
 
-	if strings.Contains(a.View(), "\u2014 theme") {
-		t.Fatal("theme selector should be hidden initially")
+	if a.settingsVisible {
+		t.Fatal("settings editor should be hidden initially")
 	}
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
-	if !a.themeVisible {
-		t.Fatal("t should open the theme selector")
+	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
+	if !a.settingsVisible {
+		t.Fatal("c should open the settings editor")
 	}
-	if !strings.Contains(a.View(), "Kanagawa") {
-		t.Errorf("selector should list palette names; got:\n%s", a.View())
-	}
-
-	start := a.themeCursor
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	if a.themeCursor == start {
-		t.Errorf("down should move the theme highlight")
-	}
-	want := a.themes[a.themeCursor]
-	// Live preview: moving the highlight recolors immediately, before enter.
-	if a.theme.Name != want.Name {
-		t.Errorf("moving the highlight should apply the theme live; app theme = %q, want %q", a.theme.Name, want.Name)
-	}
-	v := a.screen.(*Viewer)
-	if v.theme.Name != want.Name || v.detail.theme.Name != want.Name {
-		t.Errorf("live preview should propagate to components; screen=%q detail=%q want %q", v.theme.Name, v.detail.theme.Name, want.Name)
-	}
-
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	if a.themeVisible {
-		t.Errorf("enter should close the selector")
-	}
-	if a.theme.Name != want.Name {
-		t.Errorf("enter should keep the previewed theme; app theme = %q, want %q", a.theme.Name, want.Name)
-	}
-
-	// Esc cancels a live preview, restoring the palette active when it opened.
-	kept := a.theme.Name
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	if a.theme.Name == kept {
-		t.Errorf("moving should preview a different palette before cancel")
-	}
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	if a.themeVisible {
-		t.Errorf("esc should close the selector")
-	}
-	if a.theme.Name != kept {
-		t.Errorf("esc should restore the pre-open theme; got %q want %q", a.theme.Name, kept)
-	}
-	if v.theme.Name != kept {
-		t.Errorf("esc should restore the screen theme too; got %q want %q", v.theme.Name, kept)
+	view := a.View()
+	for _, want := range []string{"settings", "Appearance", "Theme", "Kanagawa"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("settings view should contain %q; got:\n%s", want, view)
+		}
 	}
 }
 
-// TestThemeSelectorGolden snapshots the theme selector overlay (regenerate with
+// TestSettingsEditorEditsAndPersists verifies that cycling the Theme field in the
+// editor recolors the UI live, updates the live config, and persists the change
+// immediately (write-on-change), and that esc closes the overlay.
+func TestSettingsEditorEditsAndPersists(t *testing.T) {
+	var saved []config.Config
+	a := New(NewViewer(demoEntries(), "sample.har"), WithConfigSaver(func(c config.Config) {
+		saved = append(saved, c)
+	}))
+	var m tea.Model = a
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
+	start := a.theme.Name
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+
+	if a.theme.Name == start {
+		t.Errorf("right should change the theme; still %q", a.theme.Name)
+	}
+	if a.cfg.Theme != a.theme.Name {
+		t.Errorf("live config theme = %q, want %q", a.cfg.Theme, a.theme.Name)
+	}
+	if v := a.screen.(*Viewer); v.theme.Name != a.theme.Name {
+		t.Errorf("editing should recolor the screen live; screen=%q want %q", v.theme.Name, a.theme.Name)
+	}
+	if len(saved) != 1 {
+		t.Fatalf("editing should persist exactly once; saved = %v", saved)
+	}
+	if saved[0].Theme != a.theme.Name {
+		t.Errorf("persisted theme = %q, want %q", saved[0].Theme, a.theme.Name)
+	}
+
+	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if a.settingsVisible {
+		t.Errorf("esc should close the settings editor")
+	}
+}
+
+// TestSettingsEditorGolden snapshots the settings editor overlay (regenerate with
 // -update).
-func TestThemeSelectorGolden(t *testing.T) {
+func TestSettingsEditorGolden(t *testing.T) {
 	var m tea.Model = newTestApp()
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("c")})
 	golden.RequireEqual(t, []byte(m.View()))
 }

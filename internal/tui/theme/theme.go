@@ -40,12 +40,26 @@ func Default() Theme {
 }
 
 // Themes returns the built-in palettes in display order, with the default first.
-// It is the source of truth for the in-app theme selector.
+// It is the source of truth for the palettes offered when changing the theme at
+// runtime.
 func Themes() []Theme {
 	return []Theme{Kanagawa(), Gruvbox(), Everforest(), Zenburn()}
 }
 
-// DisplayName is the human-facing palette name shown in the theme selector
+// ByName returns the built-in palette whose Name equals name, reporting whether
+// one matched. It is the inverse of persisting a theme by name: a name read back
+// from the saved config is resolved to its palette. An unknown or empty name
+// returns the zero Theme and false, so callers fall back to Default.
+func ByName(name string) (Theme, bool) {
+	for _, t := range Themes() {
+		if t.Name == name {
+			return t, true
+		}
+	}
+	return Theme{}, false
+}
+
+// DisplayName is the human-facing palette name shown when choosing a theme
 // (e.g. "Kanagawa"), derived from Name by dropping the "harharbinks-" prefix and
 // capitalizing the first letter.
 func (t Theme) DisplayName() string {
