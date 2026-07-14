@@ -104,6 +104,14 @@ func (d *Detail) SetSize(w, h int) {
 	d.clampScroll()
 }
 
+// SetTheme swaps the inspector's palette at runtime. The tab bar colors and the
+// key/label styling are baked into the rendered content lines, so it re-renders
+// the active tab to pick up the new palette.
+func (d *Detail) SetTheme(th theme.Theme) {
+	d.theme = th
+	d.rebuild()
+}
+
 // HandleKey processes the inspector's keys while it holds focus: left/right
 // switch tabs and the vertical navigation keys scroll the body. It reports
 // whether the key was consumed. The enclosing screen only routes keys here when

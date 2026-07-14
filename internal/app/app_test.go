@@ -145,15 +145,86 @@ func TestHelpOverlay(t *testing.T) {
 	var m tea.Model = a
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
 
-	if strings.Contains(a.View(), "toggle this help") {
+	if strings.Contains(a.View(), "\u2014 keys") {
 		t.Fatal("help should be hidden initially")
 	}
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
-	if !strings.Contains(a.View(), "toggle this help") {
+	if !strings.Contains(a.View(), "\u2014 keys") {
 		t.Errorf("? should open the help overlay")
 	}
 	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	if strings.Contains(a.View(), "toggle this help") {
+	if strings.Contains(a.View(), "\u2014 keys") {
 		t.Errorf("esc should close the help overlay")
 	}
+}
+
+// TestThemeSelector verifies t opens the theme selector, moving the highlight
+// previews the palette live (applying it to the app and its components before
+// enter), enter keeps the previewed palette, and esc cancels a preview by
+// restoring the palette that was active when the selector opened.
+func TestThemeSelector(t *testing.T) {
+	a := newTestApp()
+	var m tea.Model = a
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
+
+	if strings.Contains(a.View(), "\u2014 theme") {
+		t.Fatal("theme selector should be hidden initially")
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+	if !a.themeVisible {
+		t.Fatal("t should open the theme selector")
+	}
+	if !strings.Contains(a.View(), "Kanagawa") {
+		t.Errorf("selector should list palette names; got:\n%s", a.View())
+	}
+
+	start := a.themeCursor
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if a.themeCursor == start {
+		t.Errorf("down should move the theme highlight")
+	}
+	want := a.themes[a.themeCursor]
+	// Live preview: moving the highlight recolors immediately, before enter.
+	if a.theme.Name != want.Name {
+		t.Errorf("moving the highlight should apply the theme live; app theme = %q, want %q", a.theme.Name, want.Name)
+	}
+	v := a.screen.(*Viewer)
+	if v.theme.Name != want.Name || v.detail.theme.Name != want.Name {
+		t.Errorf("live preview should propagate to components; screen=%q detail=%q want %q", v.theme.Name, v.detail.theme.Name, want.Name)
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.themeVisible {
+		t.Errorf("enter should close the selector")
+	}
+	if a.theme.Name != want.Name {
+		t.Errorf("enter should keep the previewed theme; app theme = %q, want %q", a.theme.Name, want.Name)
+	}
+
+	// Esc cancels a live preview, restoring the palette active when it opened.
+	kept := a.theme.Name
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if a.theme.Name == kept {
+		t.Errorf("moving should preview a different palette before cancel")
+	}
+	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if a.themeVisible {
+		t.Errorf("esc should close the selector")
+	}
+	if a.theme.Name != kept {
+		t.Errorf("esc should restore the pre-open theme; got %q want %q", a.theme.Name, kept)
+	}
+	if v.theme.Name != kept {
+		t.Errorf("esc should restore the screen theme too; got %q want %q", v.theme.Name, kept)
+	}
+}
+
+// TestThemeSelectorGolden snapshots the theme selector overlay (regenerate with
+// -update).
+func TestThemeSelectorGolden(t *testing.T) {
+	var m tea.Model = newTestApp()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+	golden.RequireEqual(t, []byte(m.View()))
 }

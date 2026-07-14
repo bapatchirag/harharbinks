@@ -85,6 +85,9 @@ func (f *FileBrowser) SetSize(w, h int) {
 	f.clampCursor()
 }
 
+// SetTheme swaps the browser's palette at runtime.
+func (f *FileBrowser) SetTheme(th theme.Theme) { f.theme = th }
+
 // Selected returns the most recently chosen file path, if any.
 func (f *FileBrowser) Selected() string { return f.selected }
 
@@ -334,4 +337,5 @@ var (
 	_ tui.Component = (*FileBrowser)(nil)
 	_ tui.Sizeable  = (*FileBrowser)(nil)
 	_ tui.Focusable = (*FileBrowser)(nil)
+	_ tui.Themeable = (*FileBrowser)(nil)
 )

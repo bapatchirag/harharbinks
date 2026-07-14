@@ -81,17 +81,10 @@ func (b *Browser) Help() string {
 		"General",
 	}
 	if b.back != nil {
-		lines = append(lines,
-			"  esc                clear filter, then back to viewer",
-			"  q                  quit",
-		)
+		lines = append(lines, "  esc                clear filter, then back to viewer")
 	} else {
-		lines = append(lines,
-			"  esc                clear filter",
-			"  q                  quit",
-		)
+		lines = append(lines, "  esc                clear filter")
 	}
-	lines = append(lines, "  ?                  toggle this help")
 	return strings.Join(lines, "\n")
 }
 
@@ -99,6 +92,16 @@ func (b *Browser) Help() string {
 // every keystroke so characters are typed into the field rather than triggering
 // global actions.
 func (b *Browser) CapturesInput() bool { return b.searching }
+
+// SetTheme implements Screen, swapping the browser's palette at runtime and
+// propagating it to the picker, filter field, and status bar so the in-app theme
+// selector recolors the screen live.
+func (b *Browser) SetTheme(th theme.Theme) {
+	b.theme = th
+	b.browser.SetTheme(th)
+	b.search.SetTheme(th)
+	b.status.SetTheme(th)
+}
 
 // Init implements Screen, starting the initial directory read.
 func (b *Browser) Init() tea.Cmd { return b.browser.Init() }

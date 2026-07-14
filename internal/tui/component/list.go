@@ -65,6 +65,9 @@ func (l *List[T]) SetSize(w, h int) {
 	l.clampOffset()
 }
 
+// SetTheme swaps the list's palette at runtime.
+func (l *List[T]) SetTheme(th theme.Theme) { l.theme = th }
+
 // Focus gives the list input focus.
 func (l *List[T]) Focus() { l.focused = true }
 
@@ -199,4 +202,5 @@ var (
 	_ tui.Component = (*List[int])(nil)
 	_ tui.Sizeable  = (*List[int])(nil)
 	_ tui.Focusable = (*List[int])(nil)
+	_ tui.Themeable = (*List[int])(nil)
 )

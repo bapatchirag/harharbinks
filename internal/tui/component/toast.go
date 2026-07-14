@@ -51,6 +51,9 @@ func (t *Toast) Hide() { t.visible = false }
 // Visible reports whether the toast is currently shown.
 func (t *Toast) Visible() bool { return t.visible }
 
+// SetTheme swaps the toast's palette at runtime.
+func (t *Toast) SetTheme(th theme.Theme) { t.theme = th }
+
 // Init implements tui.Component.
 func (t *Toast) Init() tea.Cmd { return nil }
 
@@ -91,4 +94,7 @@ func (t *Toast) style() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(t.theme.Bg).Background(c).Bold(true).Padding(0, 1)
 }
 
-var _ tui.Component = (*Toast)(nil)
+var (
+	_ tui.Component = (*Toast)(nil)
+	_ tui.Themeable = (*Toast)(nil)
+)

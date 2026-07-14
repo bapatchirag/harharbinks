@@ -4,7 +4,11 @@
 // agnostic and shared by the HAR, PCAP, and audit screens alike.
 package theme
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 // Theme is an injectable palette plus the small set of derived styles the
 // component library needs. It is a value type: copy it freely and pass it into
@@ -33,6 +37,23 @@ type Theme struct {
 // derived styles.
 func Default() Theme {
 	return Kanagawa()
+}
+
+// Themes returns the built-in palettes in display order, with the default first.
+// It is the source of truth for the in-app theme selector.
+func Themes() []Theme {
+	return []Theme{Kanagawa(), Gruvbox(), Everforest(), Zenburn()}
+}
+
+// DisplayName is the human-facing palette name shown in the theme selector
+// (e.g. "Kanagawa"), derived from Name by dropping the "harharbinks-" prefix and
+// capitalizing the first letter.
+func (t Theme) DisplayName() string {
+	n := strings.TrimPrefix(t.Name, "harharbinks-")
+	if n == "" {
+		return t.Name
+	}
+	return strings.ToUpper(n[:1]) + n[1:]
 }
 
 // Gruvbox returns a Gruvbox-inspired palette — warm, retro earth tones on a soft

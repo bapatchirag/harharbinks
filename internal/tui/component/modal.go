@@ -43,6 +43,9 @@ func (m *Modal) Visible() bool { return m.visible }
 // SetSize records the screen dimensions used to bound the box width.
 func (m *Modal) SetSize(w, h int) { m.width, m.height = w, h }
 
+// SetTheme swaps the modal's palette at runtime.
+func (m *Modal) SetTheme(th theme.Theme) { m.theme = th }
+
 // Init implements tui.Component.
 func (m *Modal) Init() tea.Cmd { return nil }
 
@@ -78,4 +81,5 @@ func (m *Modal) View() string {
 var (
 	_ tui.Component = (*Modal)(nil)
 	_ tui.Sizeable  = (*Modal)(nil)
+	_ tui.Themeable = (*Modal)(nil)
 )

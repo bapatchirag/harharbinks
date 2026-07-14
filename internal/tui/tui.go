@@ -5,7 +5,11 @@
 // another. It knows nothing about HAR, PCAP, or audit data.
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/bapatchirag/harharbinks/internal/tui/theme"
+)
 
 // Component is the minimal contract every reusable widget satisfies. It mirrors
 // the Bubble Tea model lifecycle, but Update mutates the receiver in place and
@@ -34,4 +38,11 @@ type Focusable interface {
 	Focus()
 	Blur()
 	Focused() bool
+}
+
+// Themeable is implemented by components whose palette can be swapped at runtime.
+// The in-app theme selector propagates a new theme.Theme to every component so
+// the whole UI recolors live, mirroring how Sizeable lets the layout resize them.
+type Themeable interface {
+	SetTheme(theme.Theme)
 }
