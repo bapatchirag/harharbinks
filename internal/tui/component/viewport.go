@@ -30,6 +30,9 @@ func (v *Viewport) SetSize(w, h int) {
 	v.vp.Height = h
 }
 
+// SetTheme swaps the viewport's palette at runtime.
+func (v *Viewport) SetTheme(th theme.Theme) { v.theme = th }
+
 // ScrollPercent reports the current scroll position in the range [0,1].
 func (v *Viewport) ScrollPercent() float64 { return v.vp.ScrollPercent() }
 
@@ -63,4 +66,5 @@ var (
 	_ tui.Component = (*Viewport)(nil)
 	_ tui.Sizeable  = (*Viewport)(nil)
 	_ tui.Focusable = (*Viewport)(nil)
+	_ tui.Themeable = (*Viewport)(nil)
 )

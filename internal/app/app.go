@@ -11,6 +11,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -51,6 +52,10 @@ type Screen interface {
 	View() string
 	// SetSize sets the screen's render area in cells.
 	SetSize(width, height int)
+	// SetTheme swaps the screen's palette at runtime, propagating it to every
+	// component the screen owns so the in-app theme selector can recolor the
+	// whole UI live.
+	SetTheme(theme.Theme)
 	// Title is a short label shown in the app header (e.g. the file name).
 	Title() string
 	// Help returns a multi-line description of the screen's key bindings, shown
@@ -66,14 +71,19 @@ type Screen interface {
 
 // App is the root Bubble Tea model. It renders a title header, routes the global
 // quit key, tracks the terminal size, and delegates all other messages to the
-// active Screen. It also owns a shared help overlay toggled with "?".
+// active Screen. It also owns a shared help overlay toggled with "?" and a theme
+// selector toggled with "t".
 type App struct {
-	theme       theme.Theme
-	keys        keymap.KeyMap
-	screen      Screen
-	helpVisible bool
-	width       int
-	height      int
+	theme        theme.Theme
+	keys         keymap.KeyMap
+	screen       Screen
+	themes       []theme.Theme
+	themePrev    theme.Theme
+	helpVisible  bool
+	themeVisible bool
+	themeCursor  int
+	width        int
+	height       int
 }
 
 // New returns an App displaying the given initial screen.
@@ -82,6 +92,7 @@ func New(screen Screen) *App {
 		theme:  theme.Default(),
 		keys:   keymap.Default(),
 		screen: screen,
+		themes: theme.Themes(),
 	}
 }
 
@@ -118,6 +129,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return a, nil
 		}
+		// The theme selector overlay likewise captures input while open: it handles
+		// its own navigation, apply, and close keys.
+		if a.themeVisible {
+			return a, a.handleThemeKey(m)
+		}
 		// While the active screen captures input (e.g. its search field is open),
 		// forward every key to it. Only the hard interrupt still quits, so keys like
 		// "q" and "?" are typed into the field rather than triggering global actions.
@@ -134,6 +150,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.helpVisible = true
 			return a, nil
 		}
+		if key.Matches(m, a.keys.Theme) {
+			a.openThemeSelector()
+			return a, nil
+		}
 	}
 	return a, a.screen.Update(msg)
 }
@@ -147,18 +167,94 @@ func (a *App) View() string {
 	title := a.theme.Title().Render(fmt.Sprintf(" %s · %s ", productName, a.screen.Title()))
 	header := lipgloss.NewStyle().Width(a.width).Render(title)
 	base := lipgloss.JoinVertical(lipgloss.Left, header, a.screen.View())
-	if a.helpVisible {
+	switch {
+	case a.helpVisible:
 		return layout.Center(base, a.helpView())
+	case a.themeVisible:
+		return layout.Center(base, a.themeView())
 	}
 	return base
 }
 
-// helpView renders the centered help overlay box from the active screen's key
-// descriptions. The box sizes itself to its content.
+// helpView renders the centered help overlay box: the active screen's key
+// descriptions above a footer of the app-level keys (theme, help, quit) that
+// work on every screen. The box sizes itself to its content.
 func (a *App) helpView() string {
 	heading := a.theme.Title().Render(productName + " — keys")
 	body := a.theme.Base().Render(a.screen.Help())
-	content := lipgloss.JoinVertical(lipgloss.Left, heading, "", body)
+	footer := a.theme.MutedText().Render("t theme · ? help · q quit")
+	content := lipgloss.JoinVertical(lipgloss.Left, heading, "", body, "", footer)
+	return a.theme.BorderStyle(true).Padding(1, 2).Render(content)
+}
+
+// openThemeSelector shows the theme selector overlay, starting the highlight on
+// the palette currently in use and remembering it so a cancel can restore it.
+func (a *App) openThemeSelector() {
+	if len(a.themes) == 0 {
+		return
+	}
+	a.themeVisible = true
+	a.themePrev = a.theme
+	a.themeCursor = 0
+	for i, t := range a.themes {
+		if t.Name == a.theme.Name {
+			a.themeCursor = i
+			break
+		}
+	}
+}
+
+// handleThemeKey routes a key while the theme selector is open. Moving the
+// highlight applies that palette immediately so the whole UI previews live;
+// enter keeps the previewed palette and closes; esc (or t, or q) cancels,
+// restoring the palette that was active when the selector opened. ctrl+c quits.
+func (a *App) handleThemeKey(m tea.KeyMsg) tea.Cmd {
+	switch {
+	case m.Type == tea.KeyCtrlC:
+		return tea.Quit
+	case key.Matches(m, a.keys.Up):
+		a.themeCursor = (a.themeCursor - 1 + len(a.themes)) % len(a.themes)
+		a.applyTheme(a.themes[a.themeCursor])
+	case key.Matches(m, a.keys.Down):
+		a.themeCursor = (a.themeCursor + 1) % len(a.themes)
+		a.applyTheme(a.themes[a.themeCursor])
+	case key.Matches(m, a.keys.Enter):
+		a.themeVisible = false
+	case key.Matches(m, a.keys.Back, a.keys.Theme, a.keys.Quit):
+		a.applyTheme(a.themePrev)
+		a.themeVisible = false
+	}
+	return nil
+}
+
+// applyTheme adopts palette t for the app chrome and propagates it to the active
+// screen (and through it every component), recoloring the whole UI live.
+func (a *App) applyTheme(t theme.Theme) {
+	a.theme = t
+	a.screen.SetTheme(t)
+}
+
+// themeView renders the centered theme-selector overlay: the built-in palettes
+// as a highlightable list, the active one highlighted, above a key hint.
+func (a *App) themeView() string {
+	heading := a.theme.Title().Render(productName + " — theme")
+	width := 0
+	for _, t := range a.themes {
+		if w := len([]rune(t.DisplayName())); w > width {
+			width = w
+		}
+	}
+	lines := make([]string, len(a.themes))
+	for i, t := range a.themes {
+		label := padTo(t.DisplayName(), width)
+		if i == a.themeCursor {
+			lines[i] = a.theme.Selected().Render(" \u203a " + label + " ")
+		} else {
+			lines[i] = a.theme.Base().Render("   " + label + " ")
+		}
+	}
+	hint := a.theme.MutedText().Render("\u2191/\u2193 preview \u00b7 enter apply \u00b7 esc cancel")
+	content := lipgloss.JoinVertical(lipgloss.Left, heading, "", strings.Join(lines, "\n"), "", hint)
 	return a.theme.BorderStyle(true).Padding(1, 2).Render(content)
 }
 

@@ -37,6 +37,9 @@ func (s *StatusBar) SetRight(v string) { s.right = v }
 // SetSize sets the bar width; the height argument is ignored (always one line).
 func (s *StatusBar) SetSize(w, _ int) { s.width = w }
 
+// SetTheme swaps the bar's palette at runtime.
+func (s *StatusBar) SetTheme(th theme.Theme) { s.theme = th }
+
 // Init implements tui.Component.
 func (s *StatusBar) Init() tea.Cmd { return nil }
 
@@ -66,4 +69,5 @@ func (s *StatusBar) View() string {
 var (
 	_ tui.Component = (*StatusBar)(nil)
 	_ tui.Sizeable  = (*StatusBar)(nil)
+	_ tui.Themeable = (*StatusBar)(nil)
 )

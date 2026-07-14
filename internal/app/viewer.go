@@ -87,17 +87,6 @@ func NewViewer(entries []har.Entry, source string) *Viewer {
 	th := theme.Default()
 	km := keymap.Default()
 
-	table := component.NewTable([]component.Column[har.Entry]{
-		{Title: "METHOD", Width: 7,
-			Render: func(e har.Entry) string { return e.Request.Method },
-			Color:  func(e har.Entry) lipgloss.Color { return methodColor(th, e.Request.Method) }},
-		{Title: "STATUS", Width: 6, Render: func(e har.Entry) string { return fmt.Sprintf("%d", e.Response.Status) }},
-		{Title: "TYPE", Width: 10, Render: func(e har.Entry) string { return shortType(e.Response.Content.MimeType) }},
-		{Title: "SIZE", Width: 9, Render: func(e har.Entry) string { return humanSize(e.Response.Content.Size) }},
-		{Title: "TIME", Width: 8, Render: func(e har.Entry) string { return humanMS(e.Time) }},
-		{Title: "URL", Width: 40, Flex: true, Render: func(e har.Entry) string { return e.Request.URL }},
-	}, th, km)
-
 	title := "HAR"
 	if source != "" && source != "-" {
 		title = filepath.Base(source)
@@ -106,7 +95,6 @@ func NewViewer(entries []har.Entry, source string) *Viewer {
 	v := &Viewer{
 		theme:   th,
 		keys:    km,
-		table:   table,
 		detail:  NewDetail(th, km),
 		status:  component.NewStatusBar(th),
 		search:  component.NewSearch(th, "filter (text or field:value)\u2026"),
@@ -116,6 +104,19 @@ func NewViewer(entries []har.Entry, source string) *Viewer {
 		title:   title,
 		curIdx:  -1,
 	}
+	// The METHOD column's color reads v.theme (rather than the construction-time
+	// palette) so the in-app theme selector recolors the column live along with
+	// the rest of the UI.
+	v.table = component.NewTable([]component.Column[har.Entry]{
+		{Title: "METHOD", Width: 7,
+			Render: func(e har.Entry) string { return e.Request.Method },
+			Color:  func(e har.Entry) lipgloss.Color { return methodColor(v.theme, e.Request.Method) }},
+		{Title: "STATUS", Width: 6, Render: func(e har.Entry) string { return fmt.Sprintf("%d", e.Response.Status) }},
+		{Title: "TYPE", Width: 10, Render: func(e har.Entry) string { return shortType(e.Response.Content.MimeType) }},
+		{Title: "SIZE", Width: 9, Render: func(e har.Entry) string { return humanSize(e.Response.Content.Size) }},
+		{Title: "TIME", Width: 8, Render: func(e har.Entry) string { return humanMS(e.Time) }},
+		{Title: "URL", Width: 40, Flex: true, Render: func(e har.Entry) string { return e.Request.URL }},
+	}, th, km)
 	// The list starts focused; Tab hands focus to the inspector and back.
 	v.focus = focus.New(v.table, v.detail)
 	// Precompute each entry's searchable text once so the live filter (which runs
@@ -157,10 +158,6 @@ func (v *Viewer) Help() string {
 		"Detail focused",
 		"  left/right, h/l    previous / next tab",
 		"  up/down, j/k       scroll body   pgup/pgdn page",
-		"",
-		"General",
-		"  ?                  toggle this help",
-		"  q                  quit",
 	}, "\n")
 }
 
@@ -168,6 +165,20 @@ func (v *Viewer) Help() string {
 // open it consumes every keystroke so characters are typed into the field and
 // menu navigation is not intercepted by global bindings.
 func (v *Viewer) CapturesInput() bool { return v.searching || v.menuOpen }
+
+// SetTheme implements Screen, swapping the viewer's palette at runtime and
+// propagating it to every component so the in-app theme selector recolors the
+// whole screen live.
+func (v *Viewer) SetTheme(th theme.Theme) {
+	v.theme = th
+	v.table.SetTheme(th)
+	v.detail.SetTheme(th)
+	v.status.SetTheme(th)
+	v.search.SetTheme(th)
+	v.menu.SetTheme(th)
+	v.toast.SetTheme(th)
+	v.refreshStatus()
+}
 
 // Init implements Screen.
 func (v *Viewer) Init() tea.Cmd { return v.table.Init() }

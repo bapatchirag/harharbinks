@@ -1,0 +1,24 @@
+ harharbinks · sample.har                                                                           
+  METHOD  STATUS TYPE       SIZE      TIME     URL                                                  
+› GET     200    json       4.0KB     132ms    https://api.example.com/users?page=2                 
+  GET     200    javascript 86.1KB    88ms     https://cdn.example.com/app.js                       
+  POST    302    html       0B        512ms    https://api.example.com/login                        
+  GET     404    html       512B      14ms     https://example.com/favicon.ico                      
+  DELETE  204    -          ╭──────────────────────────────────────────╮sers/7                      
+                            │                                          │                            
+                            │  harharbinks — theme                     │                            
+                            │                                          │                            
+ Overview │ Headers │ Cookie│   › Kanagawa                             │                            
+  Method:  GET              │     Gruvbox                              │                            
+  URL:     https://api.examp│     Everforest                           │                            
+  Status:  200 OK           │     Zenburn                              │                            
+  HTTP:                     │                                          │                            
+  Server:  93.184.216.34    │  ↑/↓ preview · enter apply · esc cancel  │                            
+  Time:    132ms            │                                          │                            
+  Size:    4.0KB            ╰──────────────────────────────────────────╯                            
+  MIME:    application/json                                                                         
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ 1/5                         / filter · s/S sort:none · enter follow · o open · tab detail · ? help 

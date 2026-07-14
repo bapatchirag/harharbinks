@@ -30,3 +30,37 @@ func TestNamedThemes(t *testing.T) {
 		}
 	}
 }
+
+// TestThemes verifies the selector's palette list is the built-in set, with the
+// default first and no duplicates.
+func TestThemes(t *testing.T) {
+	all := Themes()
+	if len(all) != 4 {
+		t.Fatalf("Themes() returned %d palettes, want 4", len(all))
+	}
+	if all[0].Name != Default().Name {
+		t.Errorf("Themes()[0] = %q, want the default %q", all[0].Name, Default().Name)
+	}
+	seen := make(map[string]bool)
+	for _, th := range all {
+		if seen[th.Name] {
+			t.Errorf("duplicate palette %q in Themes()", th.Name)
+		}
+		seen[th.Name] = true
+	}
+}
+
+// TestDisplayName checks the human-facing name derived for the theme selector.
+func TestDisplayName(t *testing.T) {
+	want := map[string]string{
+		"harharbinks-kanagawa":   "Kanagawa",
+		"harharbinks-gruvbox":    "Gruvbox",
+		"harharbinks-everforest": "Everforest",
+		"harharbinks-zenburn":    "Zenburn",
+	}
+	for _, th := range Themes() {
+		if got := th.DisplayName(); got != want[th.Name] {
+			t.Errorf("%s DisplayName() = %q, want %q", th.Name, got, want[th.Name])
+		}
+	}
+}

@@ -38,6 +38,9 @@ func (s *Search) SetValue(v string) {
 // SetSize sets the input's text-field width (the height is ignored).
 func (s *Search) SetSize(w, _ int) { s.input.Width = w }
 
+// SetTheme swaps the search field's palette at runtime.
+func (s *Search) SetTheme(th theme.Theme) { s.theme = th }
+
 // Focus gives the input focus and starts accepting keystrokes.
 func (s *Search) Focus() { s.input.Focus() }
 
@@ -73,4 +76,5 @@ var (
 	_ tui.Component = (*Search)(nil)
 	_ tui.Sizeable  = (*Search)(nil)
 	_ tui.Focusable = (*Search)(nil)
+	_ tui.Themeable = (*Search)(nil)
 )

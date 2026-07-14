@@ -63,6 +63,9 @@ func (mn *Menu) Selected() (MenuItem, bool) {
 // SetSize sets the menu's render dimensions in cells.
 func (mn *Menu) SetSize(w, h int) { mn.width, mn.height = w, h }
 
+// SetTheme swaps the menu's palette at runtime.
+func (mn *Menu) SetTheme(th theme.Theme) { mn.theme = th }
+
 // Focus gives the menu input focus.
 func (mn *Menu) Focus() { mn.focused = true }
 
@@ -154,4 +157,5 @@ var (
 	_ tui.Component = (*Menu)(nil)
 	_ tui.Sizeable  = (*Menu)(nil)
 	_ tui.Focusable = (*Menu)(nil)
+	_ tui.Themeable = (*Menu)(nil)
 )

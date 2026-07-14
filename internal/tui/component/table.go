@@ -86,6 +86,10 @@ func (t *Table[T]) SetSize(w, h int) {
 	t.clampOffset()
 }
 
+// SetTheme swaps the table's palette at runtime, so the in-app theme selector
+// can recolor it live.
+func (t *Table[T]) SetTheme(th theme.Theme) { t.theme = th }
+
 // Focus gives the table input focus.
 func (t *Table[T]) Focus() { t.focused = true }
 
@@ -304,4 +308,5 @@ var (
 	_ tui.Component = (*Table[int])(nil)
 	_ tui.Sizeable  = (*Table[int])(nil)
 	_ tui.Focusable = (*Table[int])(nil)
+	_ tui.Themeable = (*Table[int])(nil)
 )
