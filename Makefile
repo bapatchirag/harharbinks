@@ -6,7 +6,7 @@ BIN_DIR := bin
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all build gallery test lint vet fmt fmt-check run run-gallery clean tidy release-snapshot
+.PHONY: all build gallery test lint vet fmt fmt-check run run-gallery clean tidy release-snapshot screenshots
 
 all: build
 
@@ -55,6 +55,18 @@ run-gallery: gallery
 ## release-snapshot: build a local goreleaser snapshot (no publish)
 release-snapshot:
 	goreleaser release --snapshot --clean
+
+## screenshots: regenerate the README/docs screenshots (needs vhs, freeze, gifsicle)
+screenshots: build
+	@command -v vhs >/dev/null 2>&1    || { echo "vhs not found — install: brew install vhs"; exit 1; }
+	@command -v freeze >/dev/null 2>&1 || { echo "freeze not found — install: go install github.com/charmbracelet/freeze@latest"; exit 1; }
+	@mkdir -p docs/images
+	vhs docs/tapes/hero.tape
+	vhs docs/tapes/stills.tape
+	@rm -f docs/images/.stills.gif
+	bash docs/tapes/cli.sh
+	@command -v gifsicle >/dev/null 2>&1 && gifsicle -O3 --lossy=80 --colors 128 -b docs/images/hero.gif || echo "gifsicle not found — skipping hero.gif optimization"
+	@echo "Screenshots written to docs/images/"
 
 ## clean: remove build artifacts
 clean:

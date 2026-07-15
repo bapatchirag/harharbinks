@@ -9,6 +9,13 @@ your terminal. Open a `.har` capture and browse its requests and responses —
 headers, cookies, query strings, payloads, bodies, and a reconstructed raw view —
 without a browser, and with no network access by default.
 
+<p align="center">
+  <img src="docs/images/hero.gif" width="800"
+       alt="harharbinks feature tour: browsing a HAR capture's request list, inspecting a pretty-printed JSON response, filtering with a field:value query, the export menu, and switching color themes live">
+</p>
+
+<p align="center"><em><a href="docs/screenshots.md">More screenshots &rarr;</a></em></p>
+
 ## Features
 
 **Interactive TUI**
