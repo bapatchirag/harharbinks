@@ -1,0 +1,20 @@
+Packet 3
+  Time:     2023-01-01 00:00:00.020000 UTC
+  Source:   192.168.1.100
+  Dest:     192.168.1.1
+  Protocol: DNS
+  Length:   71 bytes (captured 71)
+  Info:     Standard query 0x1a2b A example.com
+
+Layers
+  Ethernet: aa:aa:aa:aa:aa:aa → bb:bb:bb:bb:bb:bb (IPv4)
+  IPv4: 192.168.1.100 → 192.168.1.1 ttl=64 proto=UDP
+  UDP: 50000 → 53 Len=29
+  DNS: Standard query 0x1a2b A example.com
+
+Hex
+  0000  bb bb bb bb bb bb aa aa  aa aa aa aa 08 00 45 00 |..............E.|
+  0010  00 39 00 00 00 00 40 11  f6 fe c0 a8 01 64 c0 a8 |.9....@......d..|
+  0020  01 01 c3 50 00 35 00 25  ce cf 1a 2b 01 00 00 01 |...P.5.%...+....|
+  0030  00 00 00 00 00 00 07 65  78 61 6d 70 6c 65 03 63 |.......example.c|
+  0040  6f 6d 00 00 01 00 01                             |om.....|

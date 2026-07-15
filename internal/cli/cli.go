@@ -44,6 +44,8 @@ func run(args []string, version string, stdout, stderr io.Writer) int {
 			return withUpdateHint(cmdShow(args[1:], stdout, stderr), stderr, version, updateEnabled)
 		case "curl":
 			return withUpdateHint(cmdCurl(args[1:], stdout, stderr), stderr, version, updateEnabled)
+		case "pcap":
+			return withUpdateHint(cmdPcap(args[1:], stdout, stderr), stderr, version, updateEnabled)
 		case "update":
 			return cmdUpdate(args[1:], stdout, stderr, version)
 		}
@@ -86,21 +88,29 @@ func run(args []string, version string, stdout, stderr io.Writer) int {
 // "hhb" command token so examples are copy-pasteable, while the prose refers to
 // the product as harharbinks.
 func writeUsage(w io.Writer) {
-	fmt.Fprintf(w, `%s — an offline HAR file viewer TUI
+	fmt.Fprintf(w, `%s — an offline HAR & PCAP inspector
 
 Usage:
   hhb                       Open the interactive file browser to pick a HAR file
   hhb [file.har]            Open a HAR file in the interactive viewer
   hhb <command> [args]      Run a headless command
 
-Commands:
+HAR commands:
   ls     [file]             List HAR entries
   show   <index> [file]     Show details for a single entry
   curl   <index> [file]     Print an entry as a cURL command
+
+PCAP commands (run as 'hhb pcap <command>'; see 'hhb pcap' for flags):
+  ls     [file]             List packets in the capture
+  show   <index> [file]     Show one packet (layer stack + hex)
+  flows  [file]             List conversations (5-tuple flows)
+  stats  [file]             Summarize protocols and top talkers
+
+Other commands:
   update [--check]          Check for a newer release, and optionally install it
 
-Headless commands read the HAR from the [file] argument, or from stdin when it
-is omitted (e.g. hhb ls < file.har). One of the two is required.
+Headless commands read their input from the [file] argument, or from stdin when
+it is omitted (e.g. hhb ls < file.har). One of the two is required.
 
 harharbinks is offline by default. Update checks are opt-in: enable a daily
 launch check by setting update_check in the config or the HHB_UPDATE_CHECK

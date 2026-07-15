@@ -1,0 +1,23 @@
+Packet 8
+  Time:     2023-01-01 00:00:00.070000 UTC
+  Source:   192.168.1.100
+  Dest:     93.184.216.34
+  Protocol: HTTP
+  Length:   123 bytes (captured 123)
+  Info:     GET /index.html HTTP/1.1
+
+Layers
+  Ethernet: aa:aa:aa:aa:aa:aa → bb:bb:bb:bb:bb:bb (IPv4)
+  IPv4: 192.168.1.100 → 93.184.216.34 ttl=64 proto=TCP
+  TCP: 50001 → 80 [ACK, PSH] Seq=1 Ack=1 Win=64240 Len=69
+  Payload: 69 bytes payload
+
+Hex
+  0000  bb bb bb bb bb bb aa aa  aa aa aa aa 08 00 45 00 |..............E.|
+  0010  00 6d 00 00 00 00 40 06  82 a4 c0 a8 01 64 5d b8 |.m....@......d].|
+  0020  d8 22 c3 51 00 50 00 00  00 01 00 00 00 01 50 18 |.".Q.P........P.|
+  0030  fa f0 32 93 00 00 47 45  54 20 2f 69 6e 64 65 78 |..2...GET /index|
+  0040  2e 68 74 6d 6c 20 48 54  54 50 2f 31 2e 31 0d 0a |.html HTTP/1.1..|
+  0050  48 6f 73 74 3a 20 65 78  61 6d 70 6c 65 2e 63 6f |Host: example.co|
+  0060  6d 0d 0a 55 73 65 72 2d  41 67 65 6e 74 3a 20 68 |m..User-Agent: h|
+  0070  68 62 2d 74 65 73 74 0d  0a 0d 0a                |hb-test....|

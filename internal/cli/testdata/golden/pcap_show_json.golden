@@ -1,0 +1,25 @@
+{
+  "index": 5,
+  "time": "2023-01-01T00:00:00.04Z",
+  "source": "192.168.1.100",
+  "dest": "93.184.216.34",
+  "protocol": "TCP",
+  "length": 60,
+  "capLen": 60,
+  "info": "50001 → 80 [SYN] Seq=0 Win=64240 Len=0",
+  "layers": [
+    {
+      "name": "Ethernet",
+      "summary": "aa:aa:aa:aa:aa:aa → bb:bb:bb:bb:bb:bb (IPv4)"
+    },
+    {
+      "name": "IPv4",
+      "summary": "192.168.1.100 → 93.184.216.34 ttl=64 proto=TCP"
+    },
+    {
+      "name": "TCP",
+      "summary": "50001 → 80 [SYN] Seq=0 Win=64240 Len=0"
+    }
+  ],
+  "bytes": "bbbbbbbbbbbbaaaaaaaaaaaa08004500002800000000400682e9c0a801645db8d822c351005000000000000000005002faf0f9680000000000000000"
+}

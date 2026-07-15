@@ -1,0 +1,4 @@
+#   TIME      SOURCE         DESTINATION    PROTO  LENGTH  INFO
+3   0.020000  192.168.1.100  192.168.1.1    DNS    71      Standard query 0x1a2b A example.com
+4   0.030000  192.168.1.1    192.168.1.100  DNS    98      Standard query response 0x1a2b A example.com A 93.184.216.34
+14  0.130000  192.168.1.100  93.184.216.34  TLS    126     TLS 1.2 Client Hello (SNI=example.com)
