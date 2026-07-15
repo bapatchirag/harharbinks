@@ -7,7 +7,7 @@
 **harharbinks** is an offline HAR (HTTP Archive) file viewer that runs entirely in
 your terminal. Open a `.har` capture and browse its requests and responses —
 headers, cookies, query strings, payloads, bodies, and a reconstructed raw view —
-without a browser or any network access.
+without a browser, and with no network access by default.
 
 ## Features
 
@@ -40,8 +40,10 @@ without a browser or any network access.
 
 **Offline & portable**
 
-- A single static binary (`CGO_ENABLED=0`), no browser, and no network access —
-  ever.
+- A single static binary (`CGO_ENABLED=0`), no browser, and no network access by
+  default. The only feature that can reach the network is an **opt-in** update
+  check (off unless you enable it); everything else — parsing, viewing, search,
+  and export — is fully offline. See [Updates](#updates).
 
 ## Install
 
@@ -69,9 +71,10 @@ hhb [file.har]            Open a HAR file in the interactive viewer
 hhb <command> [args]      Run a headless command
 
 Commands:
-  ls    [file]            List HAR entries
-  show  <index> [file]    Show details for a single entry
-  curl  <index> [file]    Print an entry as a cURL command
+  ls     [file]           List HAR entries
+  show   <index> [file]   Show details for a single entry
+  curl   <index> [file]   Print an entry as a cURL command
+  update [--check]        Check for a newer release, and optionally install it
 
 Flags:
   --version               Print the harharbinks version and exit
@@ -123,8 +126,31 @@ cat capture.har | hhb ls
 ## Configuration
 
 Settings are stored at `~/.config/hhb/config.json` (the same path on macOS,
-Linux, and Windows). The file is created on first run and currently only holds your
-selected theme; change it in the TUI with `c` and it persists automatically.
+Linux, and Windows). The file is created on first run and holds your selected
+theme (change it in the TUI with `c`) and the `update_check` opt-in flag
+described under [Updates](#updates). Changes made in the TUI persist
+automatically.
+
+## Updates
+
+harharbinks is **offline by default** and never contacts the network unless you
+ask it to. Update behavior is entirely opt-in:
+
+- **On demand.** `hhb update --check` reports whether a newer release exists, and
+  `hhb update` downloads the latest release, verifies its checksum, and replaces
+  the running binary in place after confirmation. Unless you enable the launch
+  check below, these are the only commands that reach the network.
+- **Launch check (opt-in).** Enable a once-a-day check by setting
+  `"update_check": true` in `~/.config/hhb/config.json`, or the `HHB_UPDATE_CHECK`
+  environment variable for a single run. When enabled, a release build shows a
+  passive “update available” notice in the header — it never installs anything on
+  its own.
+
+The result is cached in `~/.config/hhb/update.json`, so the network is contacted
+at most once per day. Development builds (anything not built from a release tag)
+never check and are never self-updated; use
+`go install github.com/bapatchirag/harharbinks/cmd/hhb@latest` or your package
+manager instead.
 
 ## Roadmap
 
@@ -225,8 +251,10 @@ and coverage; the lint job pins golangci-lint to the version in
   for behavior you change; regenerate golden files with the `-update` flag.
 - **Document exported symbols** with full-sentence doc comments that explain
   intent.
-- **Keep the build offline and static** — no new runtime network calls, and the
-  binary must continue to build with `CGO_ENABLED=0`.
+- **Keep the build offline by default and static.** The binary must continue to
+  build with `CGO_ENABLED=0`, and runtime network access must stay confined to
+  the opt-in update path in `internal/update` (off by default) — no other package
+  may reach the network.
 
 ### Reporting issues
 

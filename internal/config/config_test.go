@@ -98,3 +98,40 @@ func TestSaveOverwrites(t *testing.T) {
 		t.Errorf("Load() after overwrite = %q, want %q", got.Theme, "harharbinks-everforest")
 	}
 }
+
+// TestDefaultUpdateCheckOff verifies update checks are opt-in: the built-in
+// default keeps them disabled so a fresh install stays fully offline.
+func TestDefaultUpdateCheckOff(t *testing.T) {
+	if config.Default().UpdateCheck {
+		t.Error("Default().UpdateCheck should be false (opt-in)")
+	}
+}
+
+// TestUpdateCheckRoundTrip verifies the opt-in update flag is persisted and read
+// back unchanged alongside the theme.
+func TestUpdateCheckRoundTrip(t *testing.T) {
+	useTempConfig(t)
+	want := config.Config{Theme: config.Default().Theme, UpdateCheck: true}
+	if err := config.Save(want); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	if got := config.Load(); got != want {
+		t.Errorf("Load() after Save = %+v, want %+v", got, want)
+	}
+}
+
+// TestDirIsConfigParent verifies Dir returns the parent directory of the config
+// file, the shared ~/.config/hhb location used for the config and update cache.
+func TestDirIsConfigParent(t *testing.T) {
+	dir, err := config.Dir()
+	if err != nil {
+		t.Fatalf("Dir: %v", err)
+	}
+	path, err := config.Path()
+	if err != nil {
+		t.Fatalf("Path: %v", err)
+	}
+	if got := filepath.Dir(path); got != dir {
+		t.Errorf("Dir() = %q, want parent of Path() %q", dir, got)
+	}
+}

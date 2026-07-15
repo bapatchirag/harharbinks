@@ -38,6 +38,14 @@ type Config struct {
 	// Theme is the Name of the palette applied across the interface (e.g.
 	// "harharbinks-gruvbox"). It defaults to the built-in default palette.
 	Theme string `json:"theme"`
+
+	// UpdateCheck opts in to checking GitHub for a newer harharbinks release on
+	// launch. It defaults to false so harharbinks stays completely offline unless
+	// the user asks for update checks; when true, a launch makes a single
+	// best-effort network request (cached for a day) purely to notify — never
+	// install — an available update. The HHB_UPDATE_CHECK environment variable
+	// overrides this setting for a single run.
+	UpdateCheck bool `json:"update_check"`
 }
 
 // Default returns the configuration with every field set to its built-in
@@ -46,21 +54,36 @@ type Config struct {
 // value from here, and Ensure writes these defaults out for a fresh install.
 func Default() Config {
 	return Config{
-		Theme: theme.Default().Name,
+		Theme:       theme.Default().Name,
+		UpdateCheck: false,
 	}
 }
 
-// Path returns the absolute path to the config file, ~/.config/hhb/config.json,
-// without creating anything. It resolves the user's home directory with the
-// cross-platform os.UserHomeDir and joins the fixed ~/.config/hhb location; the
-// directory itself is created lazily by Save/Ensure. On Windows this resolves
-// under the user profile (e.g. C:\Users\<name>\.config\hhb\config.json).
-func Path() (string, error) {
+// Dir returns the absolute path to harharbinks' configuration directory,
+// ~/.config/hhb, without creating it. It resolves the user's home directory with
+// the cross-platform os.UserHomeDir and joins the fixed ~/.config/hhb location.
+// It is the single source of truth for where harharbinks keeps per-user state,
+// so both the config file and the update-check cache live beneath it. On Windows
+// this resolves under the user profile (e.g. C:\Users\<name>\.config\hhb).
+func Dir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, configRoot, appDir, fileName), nil
+	return filepath.Join(home, configRoot, appDir), nil
+}
+
+// Path returns the absolute path to the config file, ~/.config/hhb/config.json,
+// without creating anything. It joins the fixed ~/.config/hhb location (see Dir)
+// with the config file name; the directory itself is created lazily by
+// Save/Ensure. On Windows this resolves under the user profile (e.g.
+// C:\Users\<name>\.config\hhb\config.json).
+func Path() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, fileName), nil
 }
 
 // Load reads the config file and merges it onto Default: it starts from the

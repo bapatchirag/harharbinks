@@ -16,14 +16,15 @@ var launchViewer = runViewer
 var launchBrowser = runBrowser
 
 // runViewer loads the HAR at file and opens it in the interactive viewer,
-// returning a process exit code.
-func runViewer(file string, stderr io.Writer) int {
+// returning a process exit code. version is the running build, passed through to
+// the app for the opt-in update check.
+func runViewer(file, version string, stderr io.Writer) int {
 	h, err := loadHAR(file)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
-	if err := app.Run(app.NewViewer(h.Log.Entries, file)); err != nil {
+	if err := app.Run(app.NewViewer(h.Log.Entries, file), version); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
@@ -31,9 +32,10 @@ func runViewer(file string, stderr io.Writer) int {
 }
 
 // runBrowser opens the interactive file browser so the user can pick a capture,
-// returning a process exit code.
-func runBrowser(stderr io.Writer) int {
-	if err := app.Run(app.NewBrowser()); err != nil {
+// returning a process exit code. version is the running build, passed through to
+// the app for the opt-in update check.
+func runBrowser(version string, stderr io.Writer) int {
+	if err := app.Run(app.NewBrowser(), version); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}

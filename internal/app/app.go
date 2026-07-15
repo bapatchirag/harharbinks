@@ -10,7 +10,10 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -20,6 +23,7 @@ import (
 	"github.com/bapatchirag/harharbinks/internal/tui/keymap"
 	"github.com/bapatchirag/harharbinks/internal/tui/layout"
 	"github.com/bapatchirag/harharbinks/internal/tui/theme"
+	"github.com/bapatchirag/harharbinks/internal/update"
 )
 
 // productName is the human-facing brand shown in the title header. The installed
@@ -84,6 +88,13 @@ type App struct {
 	settingsVisible bool
 	width           int
 	height          int
+
+	// Update-check state. version is the running build; updateEnabled gates the
+	// opt-in launch check; updateNotice holds the newer version to advertise in the
+	// header once a check has found one.
+	version       string
+	updateEnabled bool
+	updateNotice  string
 }
 
 // Option customizes an App at construction. Options are applied by New in the
@@ -110,6 +121,18 @@ func WithConfigSaver(save func(config.Config)) Option {
 	return func(a *App) { a.persist = save }
 }
 
+// WithUpdateCheck records the running version and whether opt-in update checks are
+// enabled. When enabled for a release build, the app makes a single best-effort,
+// day-cached request on launch and, if a newer release exists, shows a passive
+// notice in the header. It never installs anything; the user updates explicitly
+// with `hhb update`.
+func WithUpdateCheck(version string, enabled bool) Option {
+	return func(a *App) {
+		a.version = version
+		a.updateEnabled = enabled
+	}
+}
+
 // New returns an App displaying the given initial screen. Options may override
 // defaults such as the starting configuration and install a persistence hook.
 func New(screen Screen, opts ...Option) *App {
@@ -128,8 +151,36 @@ func New(screen Screen, opts ...Option) *App {
 	return a
 }
 
-// Init implements tea.Model.
-func (a *App) Init() tea.Cmd { return a.screen.Init() }
+// Init implements tea.Model. It starts the active screen and, when opt-in update
+// checks are enabled for a release build, kicks off a single best-effort check
+// whose result may raise a passive header notice.
+func (a *App) Init() tea.Cmd {
+	cmds := []tea.Cmd{a.screen.Init()}
+	if a.updateEnabled && update.IsReleaseBuild(a.version) {
+		cmds = append(cmds, checkUpdateCmd(a.version))
+	}
+	return tea.Batch(cmds...)
+}
+
+// updateAvailableMsg is delivered when the launch update check finds a newer
+// release; it carries the version to advertise in the header.
+type updateAvailableMsg struct{ version string }
+
+// checkUpdateCmd runs the opt-in update check off the UI path and yields an
+// updateAvailableMsg only when a newer release is found. It is best-effort and
+// silent: any error or an up-to-date result yields no message, and a short
+// timeout keeps a slow or unreachable network from delaying anything.
+func checkUpdateCmd(version string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		res, err := update.Check(ctx, version, false)
+		if err != nil || !res.Newer {
+			return nil
+		}
+		return updateAvailableMsg{version: res.Latest}
+	}
+}
 
 // Update implements tea.Model. It handles resizing, the help overlay, and the
 // global quit key, then forwards every other message to the active screen.
@@ -149,6 +200,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.layout()
 		}
 		return a, a.screen.Init()
+	case updateAvailableMsg:
+		// The launch check found a newer release; advertise it passively in the
+		// header until the user quits. The app never installs it.
+		a.updateNotice = m.version
+		return a, nil
 	case tea.KeyMsg:
 		// While the help overlay is open it captures input: any of its dismiss
 		// keys close it, ctrl+c still quits, and everything else is swallowed.
@@ -196,9 +252,7 @@ func (a *App) View() string {
 	if a.width == 0 || a.height == 0 {
 		return "initializing…"
 	}
-	title := a.theme.Title().Render(fmt.Sprintf(" %s · %s ", productName, a.screen.Title()))
-	header := lipgloss.NewStyle().Width(a.width).Render(title)
-	base := lipgloss.JoinVertical(lipgloss.Left, header, a.screen.View())
+	base := lipgloss.JoinVertical(lipgloss.Left, a.header(), a.screen.View())
 	switch {
 	case a.helpVisible:
 		return layout.Center(base, a.helpView())
@@ -206,6 +260,21 @@ func (a *App) View() string {
 		return layout.Center(base, a.settingsView())
 	}
 	return base
+}
+
+// header renders the one-line title bar: the product and active screen on the
+// left and, when the launch update check found a newer release, a muted "update
+// available" notice pinned to the right. The notice is dropped when the terminal
+// is too narrow to fit both without overlap.
+func (a *App) header() string {
+	title := a.theme.Title().Render(fmt.Sprintf(" %s · %s ", productName, a.screen.Title()))
+	if a.updateNotice != "" {
+		notice := a.theme.MutedText().Render(fmt.Sprintf(" update %s available · run hhb update ", a.updateNotice))
+		if gap := a.width - lipgloss.Width(title) - lipgloss.Width(notice); gap >= 1 {
+			return lipgloss.NewStyle().Width(a.width).Render(title + strings.Repeat(" ", gap) + notice)
+		}
+	}
+	return lipgloss.NewStyle().Width(a.width).Render(title)
 }
 
 // helpView renders the centered help overlay box: the active screen's key
@@ -304,11 +373,14 @@ func (a *App) layout() {
 // the production entry point used by the CLI; tests drive the model directly. It
 // restores the persisted configuration (theme palette and future settings) and
 // persists any change made in the settings editor, so choices survive across
-// launches.
-func Run(screen Screen) error {
+// launches. version is the running build, used only for the opt-in update check
+// (see WithUpdateCheck); when checks are disabled it is otherwise unused.
+func Run(screen Screen, version string) error {
+	cfg := config.Load()
 	opts := []Option{
-		WithConfig(config.Load()),
+		WithConfig(cfg),
 		WithConfigSaver(func(c config.Config) { _ = config.Save(c) }),
+		WithUpdateCheck(version, update.Enabled(cfg)),
 	}
 	_, err := tea.NewProgram(New(screen, opts...), tea.WithAltScreen()).Run()
 	return err

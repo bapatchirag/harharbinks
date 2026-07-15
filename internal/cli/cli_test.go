@@ -27,7 +27,7 @@ func TestRunNoArgsLaunchesBrowser(t *testing.T) {
 	orig := launchBrowser
 	defer func() { launchBrowser = orig }()
 	called := false
-	launchBrowser = func(_ io.Writer) int { called = true; return 0 }
+	launchBrowser = func(_ string, _ io.Writer) int { called = true; return 0 }
 
 	var out, errOut bytes.Buffer
 	if code := run(nil, "dev", &out, &errOut); code != 0 {
@@ -91,5 +91,21 @@ func TestHeadlessFileArgSkipsTerminalGuard(t *testing.T) {
 	}
 	if out.Len() == 0 {
 		t.Error("ls with a file should still produce output at a terminal")
+	}
+}
+
+// TestUpdateRefusesDevBuild verifies `hhb update` on a development build refuses
+// to self-update — without any network access — and points at go install.
+func TestUpdateRefusesDevBuild(t *testing.T) {
+	var out, errOut bytes.Buffer
+	code := run([]string{"update"}, "dev", &out, &errOut)
+	if code != 1 {
+		t.Fatalf("update on dev build exit = %d, want 1", code)
+	}
+	if !strings.Contains(errOut.String(), "development build") {
+		t.Errorf("stderr = %q, want a development-build refusal", errOut.String())
+	}
+	if out.Len() != 0 {
+		t.Errorf("unexpected stdout: %q", out.String())
 	}
 }
