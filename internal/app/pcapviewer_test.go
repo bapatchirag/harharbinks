@@ -23,11 +23,11 @@ func demoPackets(t *testing.T) []pcap.Packet {
 	return c.Packets
 }
 
-// sizedPcapViewer returns a PCAP viewer over the sample capture, sized like the
-// golden frame.
+// sizedPcapViewer returns a PCAP viewer over the sample capture, sized tall
+// enough that the whole packet list stays visible above the detail inspector.
 func sizedPcapViewer(t *testing.T) *PcapViewer {
 	v := NewPcapViewer(demoPackets(t), "sample.pcap")
-	v.SetSize(100, 23)
+	v.SetSize(100, 44)
 	return v
 }
 
@@ -81,5 +81,61 @@ func TestPcapViewerEmpty(t *testing.T) {
 	}
 	if _, ok := v.table.Selected(); ok {
 		t.Error("empty capture should have no selection")
+	}
+}
+
+// TestPcapViewerTabFocus verifies Tab cycles focus across the three panes — the
+// packet list, the layer tree, and the hex view — and wraps back to the list.
+func TestPcapViewerTabFocus(t *testing.T) {
+	v := sizedPcapViewer(t)
+	if !v.table.Focused() {
+		t.Fatal("the list should start focused")
+	}
+	v.handleKey(tea.KeyMsg{Type: tea.KeyTab})
+	if !v.detail.tree.Focused() {
+		t.Error("after one tab, the layer tree should be focused")
+	}
+	v.handleKey(tea.KeyMsg{Type: tea.KeyTab})
+	if !v.detail.hex.Focused() {
+		t.Error("after two tabs, the hex view should be focused")
+	}
+	v.handleKey(tea.KeyMsg{Type: tea.KeyTab})
+	if !v.table.Focused() {
+		t.Error("after three tabs, focus should wrap back to the list")
+	}
+}
+
+// TestPcapViewerDetailSync verifies the detail inspector mirrors the list: it
+// shows the first frame initially and re-syncs as the selection moves.
+func TestPcapViewerDetailSync(t *testing.T) {
+	v := sizedPcapViewer(t)
+	if v.curIdx != 0 {
+		t.Fatalf("initial curIdx = %d, want 0", v.curIdx)
+	}
+	if first, _ := v.detail.tree.Selected(); !strings.Contains(first.label, "Frame 1") {
+		t.Errorf("detail should show frame 1; got %q", first.label)
+	}
+
+	v.handleKey(keyDown().(tea.KeyMsg))
+	v.handleKey(keyDown().(tea.KeyMsg))
+	if got := v.table.Cursor(); got != 2 {
+		t.Fatalf("cursor = %d, want 2 (DNS frame)", got)
+	}
+	if frame, _ := v.detail.tree.Selected(); !strings.Contains(frame.label, "Frame 3") {
+		t.Errorf("detail should show frame 3 after moving; got %q", frame.label)
+	}
+}
+
+// TestPcapViewerLayerHighlight verifies that stepping onto a layer in the focused
+// tree highlights exactly that layer's bytes in the hex view.
+func TestPcapViewerLayerHighlight(t *testing.T) {
+	v := sizedPcapViewer(t)
+	v.handleKey(tea.KeyMsg{Type: tea.KeyTab}) // focus the layer tree
+	v.handleKey(keyDown().(tea.KeyMsg))       // Frame -> first layer
+	stack := v.packets[0].LayerStack()        // frame 1
+	start, length := v.detail.hex.Highlight()
+	if start != stack[0].Offset || length != stack[0].Length {
+		t.Errorf("highlight = [%d,%d), want first layer [%d,%d)",
+			start, start+length, stack[0].Offset, stack[0].Offset+stack[0].Length)
 	}
 }

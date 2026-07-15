@@ -167,6 +167,14 @@ func (t Theme) Selected() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(t.Bg).Background(t.Primary).Bold(true)
 }
 
+// Highlight styles a marked byte range — such as the protocol layer or field a
+// detail view points at — as a muted selection band: the normal foreground over
+// the border tone, a mid-grey that is clearly visible against the background yet
+// calmer than an accent, and distinct from the cursor's brighter accent.
+func (t Theme) Highlight() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(t.Fg).Background(t.Border)
+}
+
 // Header styles a table header row or section header.
 func (t Theme) Header() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(t.Secondary).Background(t.Subtle).Bold(true)
