@@ -54,11 +54,36 @@ func demoMenu() *Menu {
 	return mn
 }
 
+// demoTree builds a small three-level tree (all branches start expanded, so its
+// flattened view has five nodes: root, child-a, child-b, grandchild, sibling).
+func demoTree() *Tree[string] {
+	tr := NewTree(func(s string) string { return s }, theme.Default(), keymap.Default())
+	tr.SetRoots([]*TreeNode[string]{
+		Branch("root",
+			Leaf("child-a"),
+			Branch("child-b",
+				Leaf("grandchild"),
+			),
+		),
+		Leaf("sibling"),
+	})
+	return tr
+}
+
+// demoHex builds a HexView over a short HTTP request line spanning three rows.
+func demoHex() *HexView {
+	h := NewHexView(theme.Default(), keymap.Default())
+	h.SetData([]byte("GET /index.html HTTP/1.1\r\nHost: example.com\r\n\r\n"))
+	return h
+}
+
 // --- test helpers ----------------------------------------------------------
 
 func keyDown() tea.Msg  { return tea.KeyMsg{Type: tea.KeyDown} }
 func keyUp() tea.Msg    { return tea.KeyMsg{Type: tea.KeyUp} }
 func keyEnter() tea.Msg { return tea.KeyMsg{Type: tea.KeyEnter} }
+func keyLeft() tea.Msg  { return tea.KeyMsg{Type: tea.KeyLeft} }
+func keyRight() tea.Msg { return tea.KeyMsg{Type: tea.KeyRight} }
 
 // single executes cmd and returns its single message (nil for a nil cmd).
 func single(cmd tea.Cmd) tea.Msg {
@@ -165,6 +190,31 @@ func TestViewportGolden(t *testing.T) {
 	v.Focus()
 	v.SetContent("line one\nline two\nline three\nline four\nline five")
 	golden.RequireEqual(t, []byte(v.View()))
+}
+
+func TestTreeGolden(t *testing.T) {
+	tr := demoTree()
+	tr.SetSize(30, 8)
+	tr.Focus()
+	golden.RequireEqual(t, []byte(tr.View()))
+}
+
+// TestTreeCollapsedGolden captures the flattened view after the second root is
+// collapsed, so its subtree is hidden and its glyph flips to the collapsed form.
+func TestTreeCollapsedGolden(t *testing.T) {
+	tr := demoTree()
+	tr.SetSize(30, 8)
+	tr.Focus()
+	tr.SetCursor(2) // child-b, an expanded parent
+	tr.Update(keyLeft())
+	golden.RequireEqual(t, []byte(tr.View()))
+}
+
+func TestHexViewGolden(t *testing.T) {
+	h := demoHex()
+	h.SetSize(80, 4)
+	h.Focus()
+	golden.RequireEqual(t, []byte(h.View()))
 }
 
 // --- behavior tests --------------------------------------------------------
@@ -307,6 +357,258 @@ func TestModalDismiss(t *testing.T) {
 	}
 }
 
+func TestTreeNavigationClamps(t *testing.T) {
+	tr := demoTree() // 5 visible nodes
+	tr.SetSize(30, 3)
+	tr.Focus()
+
+	tr.Update(keyUp()) // already at top
+	if tr.Cursor() != 0 {
+		t.Errorf("up at top: cursor = %d, want 0", tr.Cursor())
+	}
+	tr.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	if tr.Cursor() != 4 {
+		t.Errorf("end: cursor = %d, want 4", tr.Cursor())
+	}
+	tr.Update(keyDown()) // already at bottom
+	if tr.Cursor() != 4 {
+		t.Errorf("down at bottom: cursor = %d, want 4", tr.Cursor())
+	}
+}
+
+// TestTreeCollapseAndExpand checks that collapsing a parent hides its subtree
+// from the flattened view and expanding it restores it.
+func TestTreeCollapseAndExpand(t *testing.T) {
+	tr := demoTree()
+	tr.SetSize(30, 8)
+	tr.Focus()
+	if len(tr.flat) != 5 {
+		t.Fatalf("initial flat = %d, want 5", len(tr.flat))
+	}
+	tr.Update(keyLeft()) // collapse root (cursor at 0)
+	if len(tr.flat) != 2 {
+		t.Fatalf("after collapse flat = %d, want 2 (root + sibling)", len(tr.flat))
+	}
+	tr.Update(keyRight()) // expand root again
+	if len(tr.flat) != 5 {
+		t.Fatalf("after expand flat = %d, want 5", len(tr.flat))
+	}
+}
+
+// TestTreeEnterTogglesParentAndEmits checks that enter on a parent flips its
+// expansion and still emits a SelectedMsg for the node's flattened index.
+func TestTreeEnterTogglesParentAndEmits(t *testing.T) {
+	tr := demoTree()
+	tr.SetSize(30, 8)
+	tr.Focus()
+	got := single(tr.Update(keyEnter())) // cursor at 0 = root
+	if tr.roots[0].Expanded {
+		t.Error("enter on an expanded parent should collapse it")
+	}
+	if len(tr.flat) != 2 {
+		t.Errorf("collapsed root should leave 2 rows, got %d", len(tr.flat))
+	}
+	sel, ok := got.(msg.SelectedMsg)
+	if !ok || sel.Index != 0 {
+		t.Errorf("got %#v, want msg.SelectedMsg{Index:0}", got)
+	}
+}
+
+// TestTreeLeafEnterEmitsSelection checks that enter on a leaf emits a selection
+// carrying its index without changing the tree shape.
+func TestTreeLeafEnterEmitsSelection(t *testing.T) {
+	tr := demoTree()
+	tr.SetSize(30, 8)
+	tr.Focus()
+	tr.Update(keyDown()) // cursor at 1 = child-a (a leaf)
+	got := single(tr.Update(keyEnter()))
+	sel, ok := got.(msg.SelectedMsg)
+	if !ok || sel.Index != 1 {
+		t.Errorf("got %#v, want msg.SelectedMsg{Index:1}", got)
+	}
+	if v, _ := tr.Selected(); v != "child-a" {
+		t.Errorf("selected value = %q, want %q", v, "child-a")
+	}
+}
+
+// TestTreeLeftMovesToParent checks that pressing left on a leaf moves the cursor
+// up to its parent rather than collapsing anything.
+func TestTreeLeftMovesToParent(t *testing.T) {
+	tr := demoTree()
+	tr.SetSize(30, 8)
+	tr.Focus()
+	tr.SetCursor(3) // grandchild (child of child-b at index 2)
+	tr.Update(keyLeft())
+	if tr.Cursor() != 2 {
+		t.Errorf("left on a leaf: cursor = %d, want 2 (its parent)", tr.Cursor())
+	}
+}
+
+func TestUnfocusedTreeIgnoresInput(t *testing.T) {
+	tr := demoTree()
+	tr.SetSize(30, 8) // not focused
+	tr.Update(keyDown())
+	if tr.Cursor() != 0 {
+		t.Errorf("unfocused tree moved cursor to %d", tr.Cursor())
+	}
+}
+
+func TestHexViewGoldenIsThreeRows(t *testing.T) {
+	h := demoHex()
+	h.SetSize(80, 8)
+	if got := strings.Count(h.View(), "\n") + 1; got != 3 {
+		t.Errorf("47-byte payload should render 3 rows, got %d", got)
+	}
+}
+
+// TestHexViewHighlightScrollsIntoView checks that highlighting a range far down
+// the dump scrolls it into the visible window and clears when out of bounds.
+func TestHexViewHighlightScrollsIntoView(t *testing.T) {
+	h := NewHexView(theme.Default(), keymap.Default())
+	h.SetData(make([]byte, hexBytesPerRow*20)) // 20 rows
+	h.SetSize(80, 4)                           // 4 visible rows
+
+	h.SetHighlight(hexBytesPerRow*15, 4) // row 15
+	if !strings.Contains(h.View(), "000000f0") {
+		t.Errorf("highlight should scroll row 15 (offset 0xf0) into view:\n%s", h.View())
+	}
+	if strings.Contains(h.View(), "00000000 ") {
+		t.Error("row 0 should have scrolled out of view")
+	}
+	if s, l := h.Highlight(); s != hexBytesPerRow*15 || l != 4 {
+		t.Errorf("highlight = (%d,%d), want (%d,4)", s, l, hexBytesPerRow*15)
+	}
+}
+
+// TestHexViewHighlightClamps checks that out-of-range highlights are clamped or
+// cleared and that replacing the data resets the highlight.
+func TestHexViewHighlightClamps(t *testing.T) {
+	h := NewHexView(theme.Default(), keymap.Default())
+	h.SetData(make([]byte, 10))
+
+	h.SetHighlight(8, 100) // length past the end clamps to 2
+	if s, l := h.Highlight(); s != 8 || l != 2 {
+		t.Errorf("overflow highlight = (%d,%d), want (8,2)", s, l)
+	}
+	h.SetHighlight(5, 0) // non-positive length clears
+	if _, l := h.Highlight(); l != 0 {
+		t.Errorf("zero-length highlight should clear, got length %d", l)
+	}
+	h.SetHighlight(100, 3) // start past the end clears
+	if _, l := h.Highlight(); l != 0 {
+		t.Errorf("out-of-range start should clear, got length %d", l)
+	}
+	h.SetHighlight(2, 3)
+	h.SetData([]byte("x")) // replacing data resets the highlight
+	if _, l := h.Highlight(); l != 0 {
+		t.Errorf("SetData should clear highlight, got length %d", l)
+	}
+}
+
+// TestHexViewCursorScrolls checks that moving the cursor to the first and last
+// bytes scrolls those rows into view and that moving past the ends is clamped.
+func TestHexViewCursorScrolls(t *testing.T) {
+	h := NewHexView(theme.Default(), keymap.Default())
+	h.SetData(make([]byte, hexBytesPerRow*5)) // 5 rows, 80 bytes
+	h.SetSize(80, 2)                          // 2 visible rows
+	h.Focus()
+
+	h.Update(keyUp()) // cursor already at byte 0, no-op
+	if h.Cursor() != 0 {
+		t.Errorf("up at top: cursor = %d, want 0", h.Cursor())
+	}
+	if !strings.Contains(h.View(), "00000000") {
+		t.Error("top window should include offset 0")
+	}
+	h.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	if h.Cursor() != hexBytesPerRow*5-1 {
+		t.Errorf("End: cursor = %d, want %d", h.Cursor(), hexBytesPerRow*5-1)
+	}
+	if !strings.Contains(h.View(), "00000040") { // last row = 64 = 0x40
+		t.Errorf("End should scroll the last row (offset 0x40) into view:\n%s", h.View())
+	}
+	h.Update(tea.KeyMsg{Type: tea.KeyHome})
+	if h.Cursor() != 0 {
+		t.Errorf("Home: cursor = %d, want 0", h.Cursor())
+	}
+	if !strings.Contains(h.View(), "00000000") {
+		t.Error("Home should scroll back to offset 0")
+	}
+}
+
+// TestHexViewCursorMovement walks the cursor by byte and by row and checks the
+// left/right/up/down steps land on the expected byte indices.
+func TestHexViewCursorMovement(t *testing.T) {
+	h := NewHexView(theme.Default(), keymap.Default())
+	h.SetData(make([]byte, 40)) // rows 0-15, 16-31, 32-39
+	h.SetSize(80, 3)
+	h.Focus()
+
+	h.Update(keyRight()) // 1
+	h.Update(keyDown())  // +16 -> 17
+	if h.Cursor() != 17 {
+		t.Errorf("right then down: cursor = %d, want 17", h.Cursor())
+	}
+	h.Update(keyLeft()) // 16
+	h.Update(keyUp())   // -16 -> 0
+	if h.Cursor() != 0 {
+		t.Errorf("left then up: cursor = %d, want 0", h.Cursor())
+	}
+}
+
+// TestHexViewCursorClamps checks the cursor cannot move before the first or past
+// the last byte.
+func TestHexViewCursorClamps(t *testing.T) {
+	h := NewHexView(theme.Default(), keymap.Default())
+	h.SetData(make([]byte, 10))
+	h.SetSize(80, 4)
+	h.Focus()
+
+	h.Update(keyLeft()) // already at 0
+	if h.Cursor() != 0 {
+		t.Errorf("left at first byte: cursor = %d, want 0", h.Cursor())
+	}
+	h.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	h.Update(keyRight()) // already at last byte (9)
+	if h.Cursor() != 9 {
+		t.Errorf("right at last byte: cursor = %d, want 9", h.Cursor())
+	}
+}
+
+// TestHexViewSetDataResetsCursor checks that replacing the data returns the
+// cursor to the first byte.
+func TestHexViewSetDataResetsCursor(t *testing.T) {
+	h := NewHexView(theme.Default(), keymap.Default())
+	h.SetData(make([]byte, 40))
+	h.SetSize(80, 4)
+	h.SetCursor(30)
+	h.SetData(make([]byte, 8))
+	if h.Cursor() != 0 {
+		t.Errorf("SetData should reset the cursor, got %d", h.Cursor())
+	}
+}
+
+func TestUnfocusedHexViewIgnoresInput(t *testing.T) {
+	h := NewHexView(theme.Default(), keymap.Default())
+	h.SetData(make([]byte, hexBytesPerRow*5))
+	h.SetSize(80, 2) // not focused
+	h.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	if h.Cursor() != 0 {
+		t.Errorf("unfocused hex view moved cursor to %d", h.Cursor())
+	}
+	if !strings.Contains(h.View(), "00000000") {
+		t.Error("unfocused hex view should not scroll")
+	}
+}
+
+func TestHexViewEmpty(t *testing.T) {
+	h := NewHexView(theme.Default(), keymap.Default())
+	h.SetSize(80, 4)
+	if got := h.View(); !strings.Contains(got, "no data") {
+		t.Errorf("empty hex view = %q, want a no-data placeholder", got)
+	}
+}
+
 // --- teatest ---------------------------------------------------------------
 
 // tableHarness adapts a Table into a standalone tea.Model for teatest.
@@ -329,6 +631,30 @@ func TestTableTeatest(t *testing.T) {
 	}
 	fm := tm.FinalModel(t).(tableHarness)
 	if got := fm.tbl.Cursor(); got != 2 {
+		t.Errorf("after two downs, cursor = %d, want 2", got)
+	}
+}
+
+// treeHarness adapts a Tree into a standalone tea.Model for teatest.
+type treeHarness struct{ tr *Tree[string] }
+
+func (h treeHarness) Init() tea.Cmd                         { return h.tr.Init() }
+func (h treeHarness) Update(m tea.Msg) (tea.Model, tea.Cmd) { return h, h.tr.Update(m) }
+func (h treeHarness) View() string                          { return h.tr.View() }
+
+func TestTreeTeatest(t *testing.T) {
+	tr := demoTree()
+	tr.SetSize(40, 8)
+	tr.Focus()
+
+	tm := teatest.NewTestModel(t, treeHarness{tr: tr}, teatest.WithInitialTermSize(40, 10))
+	tm.Send(keyDown())
+	tm.Send(keyDown())
+	if err := tm.Quit(); err != nil {
+		t.Fatalf("quit: %v", err)
+	}
+	fm := tm.FinalModel(t).(treeHarness)
+	if got := fm.tr.Cursor(); got != 2 {
 		t.Errorf("after two downs, cursor = %d, want 2", got)
 	}
 }

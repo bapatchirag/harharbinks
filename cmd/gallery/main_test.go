@@ -13,8 +13,8 @@ import (
 func TestGallerySmoke(t *testing.T) {
 	tm := teatest.NewTestModel(t, newModel(), teatest.WithInitialTermSize(100, 30))
 
-	// Visit every demo tab (there are nine).
-	for i := 0; i < 9; i++ {
+	// Visit every demo tab (there are eleven).
+	for i := 0; i < 11; i++ {
 		tm.Send(tea.KeyMsg{Type: tea.KeyTab})
 	}
 	// Exercise a few interactive paths (harmless regardless of active demo).
