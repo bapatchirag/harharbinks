@@ -57,6 +57,8 @@ type model struct {
 	table  *component.Table[row]
 	list   *component.List[string]
 	view   *component.Viewport
+	tree   *component.Tree[string]
+	hex    *component.HexView
 	search *component.Search
 	menu   *component.Menu
 	files  *component.FileBrowser
@@ -97,6 +99,32 @@ func newModel() *model {
 	vp := component.NewViewport(th)
 	vp.SetContent(sampleProse)
 
+	tree := component.NewTree(func(s string) string { return s }, th, km)
+	tree.SetRoots([]*component.TreeNode[string]{
+		component.Branch("Ethernet II",
+			component.Leaf("Destination: ff:ff:ff:ff:ff:ff"),
+			component.Leaf("Source: 00:1a:2b:3c:4d:5e"),
+			component.Leaf("Type: IPv4 (0x0800)"),
+		),
+		component.Branch("Internet Protocol Version 4",
+			component.Leaf("Source: 10.0.0.1"),
+			component.Leaf("Destination: 93.184.216.34"),
+			component.Branch("Flags: 0x02 (Don't Fragment)",
+				component.Leaf("Reserved bit: Not set"),
+				component.Leaf("Don't fragment: Set"),
+			),
+		),
+		component.Branch("Transmission Control Protocol",
+			component.Leaf("Source Port: 54321"),
+			component.Leaf("Destination Port: 80"),
+			component.Leaf("Flags: 0x018 (PSH, ACK)"),
+		),
+	})
+
+	hex := component.NewHexView(th, km)
+	hex.SetData([]byte("GET /index.html HTTP/1.1\r\nHost: example.com\r\nUser-Agent: harharbinks/1.0\r\nAccept: */*\r\n\r\n"))
+	hex.SetHighlight(0, 3) // the request method, to show the highlight feature
+
 	search := component.NewSearch(th, "type to filter fruits…")
 
 	menu := component.NewMenu([]component.MenuItem{
@@ -115,6 +143,8 @@ func newModel() *model {
 		table:  table,
 		list:   list,
 		view:   vp,
+		tree:   tree,
+		hex:    hex,
 		search: search,
 		menu:   menu,
 		files:  files,
@@ -123,7 +153,7 @@ func newModel() *model {
 		modal:  component.NewModal(th, km),
 		fruits: fruits,
 	}
-	m.sizeables = []tui.Sizeable{table, list, vp, search, menu, files}
+	m.sizeables = []tui.Sizeable{table, list, vp, tree, hex, search, menu, files}
 	m.demos = m.buildDemos()
 	m.focusActive()
 	return m
@@ -148,6 +178,18 @@ func (m *model) buildDemos() []demo {
 			view:  func() string { return m.view.View() },
 			focus: m.view.Focus, blur: m.view.Blur,
 			update: m.view.Update,
+		},
+		{
+			name: "Tree", hint: "↑/↓ move · →/← expand/collapse · enter toggle",
+			view:  func() string { return m.tree.View() },
+			focus: m.tree.Focus, blur: m.tree.Blur,
+			update: m.tree.Update,
+		},
+		{
+			name: "HexView", hint: "←/→/↑/↓ move byte cursor · pgup/pgdn page",
+			view:  func() string { return m.hex.View() },
+			focus: m.hex.Focus, blur: m.hex.Blur,
+			update: m.hex.Update,
 		},
 		{
 			name: "Search", hint: "type to filter live",
