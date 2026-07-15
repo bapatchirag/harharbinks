@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/bapatchirag/harharbinks/internal/config"
+	"github.com/bapatchirag/harharbinks/internal/update"
 )
 
 // ProductName is the human-facing name shown in help and version output. The
@@ -28,18 +29,23 @@ func run(args []string, version string, stdout, stderr io.Writer) int {
 	// Keep a configuration file present and current on every launch, headless or
 	// TUI. This is best-effort: a read-only or unavailable config location must not
 	// stop any command from running.
-	_, _ = config.Ensure()
+	cfg, _ := config.Ensure()
+	updateEnabled := update.Enabled(cfg)
 
 	// Dispatch headless subcommands before top-level flag parsing so that their
-	// own flags (e.g. --sort) are not intercepted here.
+	// own flags (e.g. --sort) are not intercepted here. Each headless command may
+	// append a one-line "update available" hint (see withUpdateHint), while the
+	// explicit update command manages its own network access.
 	if len(args) > 0 {
 		switch args[0] {
 		case "ls":
-			return cmdLs(args[1:], stdout, stderr)
+			return withUpdateHint(cmdLs(args[1:], stdout, stderr), stderr, version, updateEnabled)
 		case "show":
-			return cmdShow(args[1:], stdout, stderr)
+			return withUpdateHint(cmdShow(args[1:], stdout, stderr), stderr, version, updateEnabled)
 		case "curl":
-			return cmdCurl(args[1:], stdout, stderr)
+			return withUpdateHint(cmdCurl(args[1:], stdout, stderr), stderr, version, updateEnabled)
+		case "update":
+			return cmdUpdate(args[1:], stdout, stderr, version)
 		}
 	}
 
@@ -68,12 +74,12 @@ func run(args []string, version string, stdout, stderr io.Writer) int {
 	// A bare non-flag argument is treated as a HAR file and opened in the
 	// interactive viewer.
 	if fs.NArg() > 0 {
-		return launchViewer(fs.Arg(0), stderr)
+		return launchViewer(fs.Arg(0), version, stderr)
 	}
 
 	// No file and no subcommand: open the interactive file browser so the user
 	// can pick a capture. Help remains available via --help/-h.
-	return launchBrowser(stderr)
+	return launchBrowser(version, stderr)
 }
 
 // writeUsage prints the harharbinks help text. The synopsis lines show the real
@@ -88,12 +94,17 @@ Usage:
   hhb <command> [args]      Run a headless command
 
 Commands:
-  ls    [file]              List HAR entries
-  show  <index> [file]      Show details for a single entry
-  curl  <index> [file]      Print an entry as a cURL command
+  ls     [file]             List HAR entries
+  show   <index> [file]     Show details for a single entry
+  curl   <index> [file]     Print an entry as a cURL command
+  update [--check]          Check for a newer release, and optionally install it
 
 Headless commands read the HAR from the [file] argument, or from stdin when it
 is omitted (e.g. hhb ls < file.har). One of the two is required.
+
+harharbinks is offline by default. Update checks are opt-in: enable a daily
+launch check by setting update_check in the config or the HHB_UPDATE_CHECK
+environment variable. hhb update always checks on demand.
 
 Flags:
   --version                 Print the %s version and exit

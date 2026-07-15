@@ -1,14 +1,19 @@
 package cli
 
 import (
+	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"sort"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/bapatchirag/harharbinks/internal/har"
+	"github.com/bapatchirag/harharbinks/internal/update"
 )
 
 // row pairs an entry with its 1-based position in the original capture, so the
@@ -191,6 +196,134 @@ func loadHAR(path string) (*har.HAR, error) {
 		return har.Parse(os.Stdin)
 	}
 	return har.ParseFile(path)
+}
+
+// cmdUpdate implements `hhb update [--check] [--yes]`. With --check it queries
+// GitHub for the latest release and reports whether a newer one exists, changing
+// nothing. Without it — and only for a real release build — it downloads the
+// latest release, verifies its checksum, and replaces the running binary in place
+// after confirmation. Every update action is explicit: nothing here runs unless
+// the user invokes this command.
+func cmdUpdate(args []string, stdout, stderr io.Writer, version string) int {
+	fs := flag.NewFlagSet("hhb update", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	checkOnly := fs.Bool("check", false, "check for a newer release without installing it")
+	assumeYes := fs.Bool("yes", false, "install without prompting for confirmation")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if *checkOnly {
+		res, err := update.Check(ctx, version, true)
+		if err != nil {
+			fmt.Fprintf(stderr, "update check failed: %v\n", err)
+			return 1
+		}
+		printUpdateStatus(stdout, version, res)
+		return 0
+	}
+
+	// Self-installation replaces the running binary, so refuse development builds
+	// up front — before any network access — to avoid clobbering a locally-built or
+	// go-installed binary that has no matching release asset.
+	if !update.IsReleaseBuild(version) {
+		fmt.Fprintf(stderr, "hhb %s is a development build; refusing to self-update.\n", version)
+		fmt.Fprintln(stderr, "Install the latest release with: go install github.com/bapatchirag/harharbinks/cmd/hhb@latest")
+		return 1
+	}
+
+	res, err := update.Check(ctx, version, true)
+	if err != nil {
+		fmt.Fprintf(stderr, "update check failed: %v\n", err)
+		return 1
+	}
+	if !res.Newer {
+		fmt.Fprintf(stdout, "harharbinks %s is already up to date.\n", version)
+		return 0
+	}
+	if !*assumeYes && !confirmUpdate(stdout, version, res.Latest) {
+		fmt.Fprintln(stdout, "Update canceled.")
+		return 1
+	}
+
+	applied, err := update.Apply(ctx, version)
+	if err != nil {
+		fmt.Fprintf(stderr, "update failed: %v\n", err)
+		fmt.Fprintln(stderr, "Install the latest release manually with: go install github.com/bapatchirag/harharbinks/cmd/hhb@latest")
+		return 1
+	}
+	fmt.Fprintf(stdout, "Updated harharbinks %s -> %s. Restart hhb to run the new version.\n", version, applied.Latest)
+	return 0
+}
+
+// printUpdateStatus reports the outcome of a --check to stdout: a newer release,
+// an up-to-date build, or a development build (which cannot be self-updated and
+// is upgraded through the Go toolchain instead).
+func printUpdateStatus(stdout io.Writer, version string, res update.Result) {
+	switch {
+	case res.Latest == "":
+		fmt.Fprintln(stdout, "No published release was found.")
+	case !update.IsReleaseBuild(version):
+		fmt.Fprintf(stdout, "harharbinks %s is a development build; the latest release is %s.\n", version, res.Latest)
+		fmt.Fprintln(stdout, "Install it with: go install github.com/bapatchirag/harharbinks/cmd/hhb@latest")
+	case res.Newer:
+		fmt.Fprintf(stdout, "A newer harharbinks is available: %s (you have %s).\n", res.Latest, version)
+		fmt.Fprintln(stdout, "Install it with: hhb update")
+	default:
+		fmt.Fprintf(stdout, "harharbinks %s is the latest version.\n", version)
+	}
+}
+
+// confirmUpdate asks the user to approve replacing version with latest, reading a
+// yes/no answer from standard input. It returns false — declining the update —
+// when standard input is not an interactive terminal, so a non-interactive
+// invocation never blocks or updates without the explicit --yes flag.
+func confirmUpdate(stdout io.Writer, version, latest string) bool {
+	if !stdinIsTerminal() {
+		fmt.Fprintf(stdout, "A newer version (%s) is available. Re-run with --yes to install it.\n", latest)
+		return false
+	}
+	fmt.Fprintf(stdout, "Update harharbinks %s -> %s? [y/N] ", version, latest)
+	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "y", "yes":
+		return true
+	default:
+		return false
+	}
+}
+
+// withUpdateHint returns code unchanged after optionally printing a one-line
+// notice to stderr when opt-in update checks are enabled and the cache already
+// knows of a newer release. It reads only the cache — never the network — and
+// prints only to an interactive terminal, so scripts and pipelines see clean,
+// unchanged output.
+func withUpdateHint(code int, stderr io.Writer, version string, enabled bool) int {
+	if !enabled || !writerIsTerminal(stderr) {
+		return code
+	}
+	if res, ok := update.Cached(version); ok && res.Newer {
+		fmt.Fprintf(stderr, "\nA new harharbinks (%s) is available — run `hhb update`.\n", res.Latest)
+	}
+	return code
+}
+
+// writerIsTerminal reports whether w is an interactive terminal, mirroring
+// stdinIsTerminal for output streams. A non-file writer (such as a buffer in
+// tests, or a pipe) is never a terminal, keeping redirected output clean.
+func writerIsTerminal(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	if !ok {
+		return false
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 // stdinIsTerminal reports whether standard input is an interactive terminal —

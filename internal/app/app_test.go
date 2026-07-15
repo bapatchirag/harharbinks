@@ -60,6 +60,25 @@ func newTestApp() *App { return New(NewViewer(demoEntries(), "sample.har")) }
 
 func keyDown() tea.Msg { return tea.KeyMsg{Type: tea.KeyDown} }
 
+// TestUpdateNoticeInHeader verifies that once the launch check reports a newer
+// release, the passive notice appears in the app header telling the user how to
+// update. It drives the model directly and touches no network.
+func TestUpdateNoticeInHeader(t *testing.T) {
+	var m tea.Model = newTestApp()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
+	if before := m.View(); strings.Contains(before, "hhb update") {
+		t.Fatalf("header should not advertise an update before a check reports one; view:\n%s", before)
+	}
+	m, _ = m.Update(updateAvailableMsg{version: "v9.9.9"})
+	view := m.View()
+	if !strings.Contains(view, "v9.9.9") {
+		t.Errorf("header should advertise the available version; view:\n%s", view)
+	}
+	if !strings.Contains(view, "hhb update") {
+		t.Errorf("header should tell the user how to update; view:\n%s", view)
+	}
+}
+
 // TestViewerGolden renders the full app frame after a couple of moves and
 // compares it to a checked-in golden (regenerate with -update).
 func TestViewerGolden(t *testing.T) {

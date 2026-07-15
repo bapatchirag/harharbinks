@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-// update regenerates golden files: go test ./internal/cli -run TestGolden -update
-var update = flag.Bool("update", false, "update golden files")
+// updateGolden regenerates golden files: go test ./internal/cli -run TestGolden -update
+var updateGolden = flag.Bool("update", false, "update golden files")
 
 const sampleHAR = "../../testdata/sample.har"
 
@@ -39,7 +39,7 @@ func TestGolden(t *testing.T) {
 				t.Fatalf("run(%v) exit=%d stderr=%q", tc.args, code, errOut.String())
 			}
 			golden := filepath.Join("testdata", "golden", tc.name+".golden")
-			if *update {
+			if *updateGolden {
 				if err := os.MkdirAll(filepath.Dir(golden), 0o755); err != nil {
 					t.Fatal(err)
 				}
