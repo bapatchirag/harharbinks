@@ -7,24 +7,26 @@ import (
 	"github.com/bapatchirag/harharbinks/internal/app"
 )
 
-// launchViewer starts the interactive HAR viewer for a bare file argument. It is
-// a package variable so tests can stub the TUI without a real terminal.
+// launchViewer starts the interactive viewer for a bare file argument, opening
+// it as a HAR archive or a packet capture according to its format. It is a
+// package variable so tests can stub the TUI without a real terminal.
 var launchViewer = runViewer
 
 // launchBrowser starts the interactive file browser when hhb is run without a
 // file. Like launchViewer it is a package variable so tests can stub it.
 var launchBrowser = runBrowser
 
-// runViewer loads the HAR at file and opens it in the interactive viewer,
-// returning a process exit code. version is the running build, passed through to
-// the app for the opt-in update check.
+// runViewer loads file and opens it in the interactive viewer, choosing the HAR
+// or PCAP screen by the file's detected format, and returns a process exit code.
+// version is the running build, passed through to the app for the opt-in update
+// check.
 func runViewer(file, version string, stderr io.Writer) int {
-	h, err := loadHAR(file)
+	screen, err := app.Open(file)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
-	if err := app.Run(app.NewViewer(h.Log.Entries, file), version); err != nil {
+	if err := app.Run(screen, version); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
