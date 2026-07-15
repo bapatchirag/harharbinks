@@ -10,15 +10,117 @@
   "layers": [
     {
       "name": "Ethernet",
-      "summary": "aa:aa:aa:aa:aa:aa → bb:bb:bb:bb:bb:bb (IPv4)"
+      "summary": "aa:aa:aa:aa:aa:aa → bb:bb:bb:bb:bb:bb (IPv4)",
+      "offset": 0,
+      "length": 14,
+      "fields": [
+        {
+          "name": "Destination MAC",
+          "value": "bb:bb:bb:bb:bb:bb",
+          "offset": 0,
+          "length": 6
+        },
+        {
+          "name": "Source MAC",
+          "value": "aa:aa:aa:aa:aa:aa",
+          "offset": 6,
+          "length": 6
+        },
+        {
+          "name": "EtherType",
+          "value": "IPv4",
+          "offset": 12,
+          "length": 2
+        }
+      ]
     },
     {
       "name": "IPv4",
-      "summary": "192.168.1.100 → 93.184.216.34 ttl=64 proto=TCP"
+      "summary": "192.168.1.100 → 93.184.216.34 ttl=64 proto=TCP",
+      "offset": 14,
+      "length": 20,
+      "fields": [
+        {
+          "name": "Version",
+          "value": "4",
+          "offset": 14,
+          "length": 1
+        },
+        {
+          "name": "Total Length",
+          "value": "40",
+          "offset": 16,
+          "length": 2
+        },
+        {
+          "name": "TTL",
+          "value": "64",
+          "offset": 22,
+          "length": 1
+        },
+        {
+          "name": "Protocol",
+          "value": "TCP",
+          "offset": 23,
+          "length": 1
+        },
+        {
+          "name": "Source",
+          "value": "192.168.1.100",
+          "offset": 26,
+          "length": 4
+        },
+        {
+          "name": "Destination",
+          "value": "93.184.216.34",
+          "offset": 30,
+          "length": 4
+        }
+      ]
     },
     {
       "name": "TCP",
-      "summary": "50001 → 80 [SYN] Seq=0 Win=64240 Len=0"
+      "summary": "50001 → 80 [SYN] Seq=0 Win=64240 Len=0",
+      "offset": 34,
+      "length": 20,
+      "fields": [
+        {
+          "name": "Source Port",
+          "value": "50001",
+          "offset": 34,
+          "length": 2
+        },
+        {
+          "name": "Destination Port",
+          "value": "80",
+          "offset": 36,
+          "length": 2
+        },
+        {
+          "name": "Sequence",
+          "value": "0",
+          "offset": 38,
+          "length": 4
+        },
+        {
+          "name": "Acknowledgment",
+          "value": "0",
+          "offset": 42,
+          "length": 4
+        },
+        {
+          "name": "Flags",
+          "value": "SYN",
+          "offset": 47,
+          "length": 1
+        },
+        {
+          "name": "Window",
+          "value": "64240",
+          "offset": 48,
+          "length": 2
+        }
+      ]
     }
   ],
   "bytes": "bbbbbbbbbbbbaaaaaaaaaaaa08004500002800000000400682e9c0a801645db8d822c351005000000000000000005002faf0f9680000000000000000"

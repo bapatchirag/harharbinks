@@ -1,6 +1,8 @@
 package pcap
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -9,11 +11,28 @@ import (
 	"github.com/gopacket/gopacket/layers"
 )
 
-// Layer is one decoded protocol layer's name and a short human-readable summary.
-// It lets packet-detail views present the layer stack without importing gopacket.
+// Layer is one decoded protocol layer: its name, a short human-readable summary,
+// the byte range it occupies within the frame, and its individual fields. The
+// byte range lets a packet-detail view highlight exactly the bytes a layer spans
+// in a companion hex view, and the fields let it expand the layer into a tree —
+// all without the view importing gopacket.
 type Layer struct {
-	Name    string `json:"name"`
-	Summary string `json:"summary"`
+	Name    string  `json:"name"`
+	Summary string  `json:"summary"`
+	Offset  int     `json:"offset"`
+	Length  int     `json:"length"`
+	Fields  []Field `json:"fields,omitempty"`
+}
+
+// Field is one decoded name/value pair within a Layer, such as a TTL or a TCP
+// port, together with the byte range it occupies in the frame so a detail view
+// can highlight exactly those bytes. A field's value may span multiple lines (for
+// example a pretty-printed HTTP body), which a tree view can split across rows.
+type Field struct {
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Offset int    `json:"offset"`
+	Length int    `json:"length"`
 }
 
 // Protocol returns the short name of the packet's most specific decoded protocol
@@ -92,11 +111,23 @@ func (p Packet) Source() string { return endpoint(p.decoded, true) }
 func (p Packet) Dest() string { return endpoint(p.decoded, false) }
 
 // LayerStack returns the packet's decoded layers from outermost (link) to
-// innermost (application), each with a short summary.
+// innermost (application), each with a short summary, its byte range within the
+// frame, and its decoded fields. Byte offsets are the running sum of each layer's
+// on-wire header length, so consecutive layers tile the frame and a detail view
+// can map any layer back to the exact bytes it occupies.
 func (p Packet) LayerStack() []Layer {
 	var out []Layer
+	offset := 0
 	for _, l := range p.decoded.Layers() {
-		out = append(out, Layer{Name: l.LayerType().String(), Summary: layerSummary(l)})
+		length := len(l.LayerContents())
+		out = append(out, Layer{
+			Name:    l.LayerType().String(),
+			Summary: layerSummary(l),
+			Offset:  offset,
+			Length:  length,
+			Fields:  layerFields(l, offset),
+		})
+		offset += length
 	}
 	return out
 }
@@ -188,8 +219,9 @@ func icmpInfo(icmp *layers.ICMPv4) string {
 	}
 }
 
-// tcpInfo renders a bare TCP segment with its flags, sequence, and payload length.
-func tcpInfo(tcp *layers.TCP) string {
+// tcpFlagNames returns the set control-flag names of a TCP segment in a stable
+// order, so the info column and the field breakdown describe the same flags.
+func tcpFlagNames(tcp *layers.TCP) []string {
 	var flags []string
 	for _, f := range []struct {
 		set  bool
@@ -202,9 +234,14 @@ func tcpInfo(tcp *layers.TCP) string {
 			flags = append(flags, f.name)
 		}
 	}
+	return flags
+}
+
+// tcpInfo renders a bare TCP segment with its flags, sequence, and payload length.
+func tcpInfo(tcp *layers.TCP) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%d → %d [%s] Seq=%d", uint16(tcp.SrcPort), uint16(tcp.DstPort),
-		strings.Join(flags, ", "), tcp.Seq)
+		strings.Join(tcpFlagNames(tcp), ", "), tcp.Seq)
 	if tcp.ACK {
 		fmt.Fprintf(&b, " Ack=%d", tcp.Ack)
 	}
@@ -428,5 +465,290 @@ func layerSummary(l gopacket.Layer) string {
 			return fmt.Sprintf("%d bytes payload", len(app.Payload()))
 		}
 		return ""
+	}
+}
+
+// layerFields returns a decoded layer's individual name/value fields, each with
+// its absolute byte range in the frame, so a detail view can expand the layer
+// into a tree and highlight the exact bytes of a selected field. base is the
+// layer's own offset in the frame; the per-protocol extractors report offsets
+// relative to the layer, and a field with no precise range known (length zero)
+// falls back to spanning the whole layer.
+func layerFields(l gopacket.Layer, base int) []Field {
+	fields := rawLayerFields(l)
+	layerLen := len(l.LayerContents())
+	for i := range fields {
+		if fields[i].Length <= 0 {
+			fields[i].Offset = base
+			fields[i].Length = layerLen
+			continue
+		}
+		fields[i].Offset += base
+	}
+	return fields
+}
+
+// rawLayerFields breaks a decoded layer into its fields with offsets relative to
+// the start of the layer. It mirrors layerSummary's protocol coverage; the
+// application payload is parsed for HTTP and TLS, falling back to a byte count for
+// opaque data.
+func rawLayerFields(l gopacket.Layer) []Field {
+	switch v := l.(type) {
+	case *layers.Ethernet:
+		return []Field{
+			{"Destination MAC", v.DstMAC.String(), 0, 6},
+			{"Source MAC", v.SrcMAC.String(), 6, 6},
+			{"EtherType", v.EthernetType.String(), 12, 2},
+		}
+	case *layers.IPv4:
+		return []Field{
+			{"Version", fmt.Sprintf("%d", v.Version), 0, 1},
+			{"Total Length", fmt.Sprintf("%d", v.Length), 2, 2},
+			{"TTL", fmt.Sprintf("%d", v.TTL), 8, 1},
+			{"Protocol", v.Protocol.String(), 9, 1},
+			{"Source", v.SrcIP.String(), 12, 4},
+			{"Destination", v.DstIP.String(), 16, 4},
+		}
+	case *layers.IPv6:
+		return []Field{
+			{"Next Header", v.NextHeader.String(), 6, 1},
+			{"Hop Limit", fmt.Sprintf("%d", v.HopLimit), 7, 1},
+			{"Source", v.SrcIP.String(), 8, 16},
+			{"Destination", v.DstIP.String(), 24, 16},
+		}
+	case *layers.ARP:
+		return arpFields(v)
+	case *layers.ICMPv4:
+		return []Field{
+			{"Type", v.TypeCode.String(), 0, 2},
+			{"Identifier", fmt.Sprintf("0x%04x", v.Id), 4, 2},
+			{"Sequence", fmt.Sprintf("%d", v.Seq), 6, 2},
+		}
+	case *layers.TCP:
+		return []Field{
+			{"Source Port", fmt.Sprintf("%d", uint16(v.SrcPort)), 0, 2},
+			{"Destination Port", fmt.Sprintf("%d", uint16(v.DstPort)), 2, 2},
+			{"Sequence", fmt.Sprintf("%d", v.Seq), 4, 4},
+			{"Acknowledgment", fmt.Sprintf("%d", v.Ack), 8, 4},
+			{"Flags", joinFlags(tcpFlagNames(v)), 13, 1},
+			{"Window", fmt.Sprintf("%d", v.Window), 14, 2},
+		}
+	case *layers.UDP:
+		return []Field{
+			{"Source Port", fmt.Sprintf("%d", uint16(v.SrcPort)), 0, 2},
+			{"Destination Port", fmt.Sprintf("%d", uint16(v.DstPort)), 2, 2},
+			{"Length", fmt.Sprintf("%d", v.Length), 4, 2},
+		}
+	case *layers.DNS:
+		return dnsFields(v)
+	default:
+		if app, ok := l.(gopacket.ApplicationLayer); ok {
+			return payloadFields(app.Payload())
+		}
+		return nil
+	}
+}
+
+// arpFields breaks an ARP message into its operation and the sender/target
+// hardware and protocol addresses, sizing each address field from the packet's
+// own address-length fields so the byte ranges stay correct for any address size.
+func arpFields(v *layers.ARP) []Field {
+	hlen, plen := int(v.HwAddressSize), int(v.ProtAddressSize)
+	sha := 8
+	spa := sha + hlen
+	tha := spa + plen
+	tpa := tha + hlen
+	return []Field{
+		{"Operation", arpOperationName(v.Operation), 6, 2},
+		{"Sender MAC", net.HardwareAddr(v.SourceHwAddress).String(), sha, hlen},
+		{"Sender IP", net.IP(v.SourceProtAddress).String(), spa, plen},
+		{"Target MAC", net.HardwareAddr(v.DstHwAddress).String(), tha, hlen},
+		{"Target IP", net.IP(v.DstProtAddress).String(), tpa, plen},
+	}
+}
+
+// joinFlags renders a set of flag names as a comma-separated list, or "none" when
+// no flags are set, so the field always has a value.
+func joinFlags(flags []string) string {
+	if len(flags) == 0 {
+		return "none"
+	}
+	return strings.Join(flags, ", ")
+}
+
+// arpOperationName names an ARP operation code (request or reply).
+func arpOperationName(op uint16) string {
+	switch op {
+	case layers.ARPRequest:
+		return "request"
+	case layers.ARPReply:
+		return "reply"
+	default:
+		return fmt.Sprintf("%d", op)
+	}
+}
+
+// dnsFields breaks a DNS message into its transaction id, direction, and one
+// field per question and answer record. The header fields carry precise byte
+// ranges; the variable-length records fall back to the whole DNS layer.
+func dnsFields(d *layers.DNS) []Field {
+	fields := []Field{
+		{"Transaction ID", fmt.Sprintf("0x%04x", d.ID), 0, 2},
+		{"Message", dnsMessageType(d.QR), 2, 2},
+	}
+	for _, q := range d.Questions {
+		fields = append(fields, Field{Name: "Query", Value: fmt.Sprintf("%s %s", q.Type, q.Name)})
+	}
+	for _, a := range d.Answers {
+		fields = append(fields, Field{Name: "Answer", Value: dnsAnswerValue(a)})
+	}
+	return fields
+}
+
+// dnsMessageType labels a DNS message as a query or a response.
+func dnsMessageType(qr bool) string {
+	if qr {
+		return "response"
+	}
+	return "query"
+}
+
+// dnsAnswerValue renders a DNS answer record, naming the common address and
+// alias record types and falling back to the bare type for the rest.
+func dnsAnswerValue(a layers.DNSResourceRecord) string {
+	switch a.Type {
+	case layers.DNSTypeA, layers.DNSTypeAAAA:
+		if a.IP != nil {
+			return fmt.Sprintf("%s %s %s", a.Name, a.Type, a.IP)
+		}
+	case layers.DNSTypeCNAME:
+		return fmt.Sprintf("%s CNAME %s", a.Name, a.CNAME)
+	}
+	return fmt.Sprintf("%s %s", a.Name, a.Type)
+}
+
+// tlsFields decodes a TLS record header and, for a handshake, its message type; a
+// ClientHello additionally contributes the negotiated version and SNI host name.
+// Fixed-position fields carry byte ranges; the deeply nested SNI falls back to the
+// whole layer. Without decryption only this cleartext handshake metadata is known.
+func tlsFields(payload []byte) []Field {
+	if len(payload) < 5 {
+		return []Field{{Name: "TLS", Value: "record"}}
+	}
+	fields := []Field{
+		{"Content Type", tlsContentTypeName(payload[0]), 0, 1},
+		{"Version", tlsVersion(payload[1], payload[2]), 1, 2},
+	}
+	if payload[0] == 22 { // handshake
+		hs := payload[5:]
+		if len(hs) > 0 {
+			fields = append(fields, Field{"Handshake Type", tlsHandshakeTypeName(hs[0]), 5, 1})
+			if hs[0] == 1 { // ClientHello
+				ver, sni := parseClientHello(hs)
+				if ver != "" {
+					fields = append(fields, Field{"Client Version", ver, 9, 2})
+				}
+				if sni != "" {
+					fields = append(fields, Field{Name: "Server Name", Value: sni})
+				}
+			}
+		}
+	}
+	return fields
+}
+
+// httpFields parses a cleartext HTTP request or response into its start line, its
+// headers, and — when present — a formatted body, tracking each part's byte range
+// within the payload so a detail view can highlight the exact line it points at.
+func httpFields(payload []byte) []Field {
+	headText, body := splitHTTPMessage(payload)
+	lines := strings.Split(headText, "\r\n")
+
+	var fields []Field
+	pos := 0
+	for i, line := range lines {
+		switch {
+		case i == 0 && line != "":
+			name := "Request Line"
+			if httpKind(payload) == "response" {
+				name = "Status Line"
+			}
+			fields = append(fields, Field{name, line, pos, len(line)})
+		case i > 0 && line != "":
+			if c := strings.IndexByte(line, ':'); c >= 0 {
+				fields = append(fields, Field{strings.TrimSpace(line[:c]), strings.TrimSpace(line[c+1:]), pos, len(line)})
+			}
+		}
+		pos += len(line) + 2 // advance past the line and its CRLF
+	}
+	if len(body) > 0 {
+		fields = append(fields, Field{"Body", formatHTTPBody(body), len(headText) + 4, len(body)})
+	}
+	return fields
+}
+
+// splitHTTPMessage splits a raw HTTP message into its header block and body at the
+// blank line that separates them; a message without that separator is all headers.
+func splitHTTPMessage(payload []byte) (head string, body []byte) {
+	sep := []byte("\r\n\r\n")
+	if i := bytes.Index(payload, sep); i >= 0 {
+		return string(payload[:i]), payload[i+len(sep):]
+	}
+	return string(payload), nil
+}
+
+// formatHTTPBody pretty-prints a JSON body for readability and returns any other
+// body unchanged, so a detail view can show structured payloads legibly without
+// altering non-JSON content.
+func formatHTTPBody(body []byte) string {
+	trimmed := bytes.TrimSpace(body)
+	if json.Valid(trimmed) {
+		var buf bytes.Buffer
+		if err := json.Indent(&buf, trimmed, "", "  "); err == nil {
+			return buf.String()
+		}
+	}
+	return string(body)
+}
+
+// payloadFields decodes an application-layer payload into fields, recognizing
+// cleartext HTTP requests and responses and TLS records; anything else is
+// summarized by its byte length so an opaque payload still shows a node.
+func payloadFields(payload []byte) []Field {
+	switch {
+	case isTLSRecord(payload):
+		return tlsFields(payload)
+	case httpKind(payload) != "":
+		return httpFields(payload)
+	default:
+		return []Field{{Name: "Payload", Value: fmt.Sprintf("%d bytes", len(payload))}}
+	}
+}
+
+// tlsContentTypeName names a TLS record content type byte.
+func tlsContentTypeName(t byte) string {
+	switch t {
+	case 20:
+		return "change_cipher_spec"
+	case 21:
+		return "alert"
+	case 22:
+		return "handshake"
+	case 23:
+		return "application_data"
+	default:
+		return fmt.Sprintf("0x%02x", t)
+	}
+}
+
+// tlsHandshakeTypeName names the TLS handshake message types this viewer surfaces.
+func tlsHandshakeTypeName(t byte) string {
+	switch t {
+	case 1:
+		return "Client Hello"
+	case 2:
+		return "Server Hello"
+	default:
+		return fmt.Sprintf("type %d", t)
 	}
 }

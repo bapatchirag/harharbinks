@@ -233,11 +233,12 @@ func (h *HexView) cellStyle(idx int) lipgloss.Style {
 	}
 }
 
-// rangeStyle styles the bytes of the externally set highlight range with a
-// subtle background, so a companion view (such as a layer Tree) can mark a span
-// of bytes distinctly from the user's cursor.
+// rangeStyle styles the bytes of the externally set highlight range so a
+// companion view (such as a layer Tree) can mark a span of bytes distinctly from
+// the user's cursor. It uses the theme's highlight style, which each palette
+// tunes for visibility.
 func (h *HexView) rangeStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(h.theme.Fg).Background(h.theme.Subtle)
+	return h.theme.Highlight()
 }
 
 // rows is the number of 16-byte lines the data spans.

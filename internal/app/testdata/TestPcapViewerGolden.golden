@@ -8,17 +8,17 @@
   6     0.050000  93.184.216.34   192.168.1.100   TCP    60     80 → 50001 [SYN, ACK] Seq=0 Ack=1 W…
   7     0.060000  192.168.1.100   93.184.216.34   TCP    60     50001 → 80 [ACK] Seq=1 Ack=1 Win=64…
   8     0.070000  192.168.1.100   93.184.216.34   HTTP   123    GET /index.html HTTP/1.1            
-  9     0.080000  93.184.216.34   192.168.1.100   HTTP   131    HTTP/1.1 200 OK                     
-  10    0.090000  192.168.1.100   93.184.216.34   TCP    60     50001 → 80 [ACK, FIN] Seq=70 Ack=78…
-  11    0.100000  192.168.1.100   93.184.216.34   TCP    60     50002 → 443 [SYN] Seq=0 Win=64240 L…
-  12    0.110000  93.184.216.34   192.168.1.100   TCP    60     443 → 50002 [SYN, ACK] Seq=0 Ack=1 …
-  13    0.120000  192.168.1.100   93.184.216.34   TCP    60     50002 → 443 [ACK] Seq=1 Ack=1 Win=6…
-  14    0.130000  192.168.1.100   93.184.216.34   TLS    126    TLS 1.2 Client Hello (SNI=example.c…
-  15    0.140000  192.168.1.100   93.184.216.34   ICMPv4 60     Echo (ping) request id=0x0001 seq=1 
-  16    0.150000  93.184.216.34   192.168.1.100   ICMPv4 60     Echo (ping) reply id=0x0001 seq=1   
+ Layers                                                                                             
+› ▾ Frame 3: 71 bytes on wire                                                                       
+    ▸ Ethernet — aa:aa:aa:aa:aa:aa → bb:bb:bb:bb:bb:bb (IPv4)                                       
+    ▸ IPv4 — 192.168.1.100 → 192.168.1.1 ttl=64 proto=UDP                                           
+    ▸ UDP — 50000 → 53 Len=29                                                                       
+    ▸ DNS — Standard query 0x1a2b A example.com                                                     
+ Bytes                                                                                              
+00000000  bb bb bb bb bb bb aa aa  aa aa aa aa 08 00 45 00  |..............E.|                      
+00000010  00 39 00 00 00 00 40 11  f6 fe c0 a8 01 64 c0 a8  |.9....@......d..|                      
+00000020  01 01 c3 50 00 35 00 25  ce cf 1a 2b 01 00 00 01  |...P.5.%...+....|                      
+00000030  00 00 00 00 00 00 07 65  78 61 6d 70 6c 65 03 63  |.......example.c|                      
+00000040  6f 6d 00 00 01 00 01                              |om.....         |                      
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
- 3/16                                           ↑/↓ move · pgup/pgdn page · g/G top/bottom · ? help 
+ 3/16                                                   list · ↑/↓ move · tab layers/bytes · ? help 
