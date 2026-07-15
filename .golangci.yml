@@ -1,0 +1,24 @@
+# golangci-lint configuration (schema v2).
+#
+# The lint job pins a prebuilt golangci-lint v2 in .github/workflows/ci.yml. This
+# file keeps that migration behavior-preserving: golangci-lint v2 no longer applies
+# v1's built-in default exclusions, so a bare run would surface pre-existing,
+# intentional findings (e.g. unchecked writes to stdout/stderr). Re-adding the
+# standard exclusion presets restores the exact rule set the project linted under
+# v1, so only the linter engine changed, not the results.
+version: "2"
+
+linters:
+  # The "standard" set matches golangci-lint's historical defaults: errcheck,
+  # govet, ineffassign, staticcheck, and unused (v1's gosimple is now part of
+  # staticcheck).
+  default: standard
+  exclusions:
+    # These presets are the v2 equivalents of v1's default exclude list.
+    # std-error-handling covers the benign unchecked stdlib calls in this
+    # codebase (fmt.Fprint*, tabwriter.Flush, os.Setenv, and a read-only Close).
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling

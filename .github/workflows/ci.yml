@@ -39,15 +39,15 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
-      - uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.64.8
-          # Build golangci-lint from source with the job's Go toolchain: the
-          # prebuilt binary is built with an older Go and refuses to lint a module
-          # whose go directive targets a newer version (go-selfupdate pulls the
-          # directive to 1.25.x). Migrating to golangci-lint v2 (which restores a
-          # pinned prebuilt binary) is tracked in issue #23.
-          install-mode: goinstall
+          # Pinned prebuilt golangci-lint v2. Lint rules live in .golangci.yml,
+          # which re-adds v1's default exclusions so this stays behavior-preserving.
+          # v2 is built with a current Go toolchain, so the fast prebuilt binary
+          # lints this module (whose go directive is 1.25.x) without the goinstall
+          # workaround. Bump this pin if the go.mod go directive ever outpaces the
+          # Go version the pinned release was built with.
+          version: v2.12.2
 
   build-windows:
     name: build (windows)

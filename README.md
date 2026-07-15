@@ -237,8 +237,9 @@ make lint           # golangci-lint (matches the pinned CI version)
 ```
 
 CI runs on Linux and macOS (with a Windows build check) using the race detector
-and coverage; the lint job pins golangci-lint to the version in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+and coverage; the lint job pins golangci-lint (v2) to the version in
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml), and the lint rules live in
+[`.golangci.yml`](.golangci.yml).
 
 ### Conventions
 
