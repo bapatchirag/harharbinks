@@ -54,7 +54,7 @@ func cmdLs(args []string, stdout, stderr io.Writer) int {
 	if len(positionals) > 0 {
 		file = positionals[0]
 	}
-	if err := ensureInput(file, "hhb ls file.har", "hhb ls < file.har"); err != nil {
+	if err := ensureInput("HAR", file, "hhb ls file.har", "hhb ls < file.har"); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 2
 	}
@@ -93,7 +93,7 @@ func cmdShow(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return 2
 	}
-	if err := ensureInput(file, "hhb show <index> file.har", "hhb show <index> < file.har"); err != nil {
+	if err := ensureInput("HAR", file, "hhb show <index> file.har", "hhb show <index> < file.har"); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 2
 	}
@@ -126,7 +126,7 @@ func cmdCurl(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return 2
 	}
-	if err := ensureInput(file, "hhb curl <index> file.har", "hhb curl <index> < file.har"); err != nil {
+	if err := ensureInput("HAR", file, "hhb curl <index> file.har", "hhb curl <index> < file.har"); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 2
 	}
@@ -338,18 +338,19 @@ var stdinIsTerminal = func() bool {
 	return fi.Mode()&os.ModeCharDevice != 0
 }
 
-// ensureInput validates that a headless command has a HAR to read: either a file
-// path was given, or something was piped/redirected into stdin. When neither
-// holds (no file and stdin is an interactive terminal) it returns a usage error
-// citing both correct forms, so the command reports bad usage instead of hanging.
-func ensureInput(file, fileExample, pipeExample string) error {
+// ensureInput validates that a headless command has something to read: either a
+// file path was given, or something was piped/redirected into stdin. When
+// neither holds (no file and stdin is an interactive terminal) it returns a usage
+// error citing both correct forms, so the command reports bad usage instead of
+// hanging. kind names the expected input (e.g. "HAR" or "capture").
+func ensureInput(kind, file, fileExample, pipeExample string) error {
 	if file != "" && file != "-" {
 		return nil
 	}
 	if !stdinIsTerminal() {
 		return nil
 	}
-	return fmt.Errorf("no HAR input: pass a file (%s) or pipe one in (%s)", fileExample, pipeExample)
+	return fmt.Errorf("no %s input: pass a file (%s) or pipe one in (%s)", kind, fileExample, pipeExample)
 }
 
 // parseArgs parses fs while allowing flags and positional arguments to be

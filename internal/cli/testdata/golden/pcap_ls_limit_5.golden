@@ -1,0 +1,6 @@
+#  TIME      SOURCE         DESTINATION    PROTO  LENGTH  INFO
+1  0.000000  192.168.1.100  192.168.1.1    ARP    60      Who has 192.168.1.1? Tell 192.168.1.100
+2  0.010000  192.168.1.1    192.168.1.100  ARP    60      192.168.1.1 is at bb:bb:bb:bb:bb:bb
+3  0.020000  192.168.1.100  192.168.1.1    DNS    71      Standard query 0x1a2b A example.com
+4  0.030000  192.168.1.1    192.168.1.100  DNS    98      Standard query response 0x1a2b A example.com A 93.184.216.34
+5  0.040000  192.168.1.100  93.184.216.34  TCP    60      50001 → 80 [SYN] Seq=0 Win=64240 Len=0

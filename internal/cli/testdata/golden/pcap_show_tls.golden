@@ -1,0 +1,23 @@
+Packet 14
+  Time:     2023-01-01 00:00:00.130000 UTC
+  Source:   192.168.1.100
+  Dest:     93.184.216.34
+  Protocol: TLS
+  Length:   126 bytes (captured 126)
+  Info:     TLS 1.2 Client Hello (SNI=example.com)
+
+Layers
+  Ethernet: aa:aa:aa:aa:aa:aa → bb:bb:bb:bb:bb:bb (IPv4)
+  IPv4: 192.168.1.100 → 93.184.216.34 ttl=64 proto=TCP
+  TCP: 50002 → 443 [ACK, PSH] Seq=1 Ack=1 Win=64240 Len=72
+  Payload: 72 bytes payload
+
+Hex
+  0000  bb bb bb bb bb bb aa aa  aa aa aa aa 08 00 45 00 |..............E.|
+  0010  00 70 00 00 00 00 40 06  82 a1 c0 a8 01 64 5d b8 |.p....@......d].|
+  0020  d8 22 c3 52 01 bb 00 00  00 01 00 00 00 01 50 18 |.".R..........P.|
+  0030  fa f0 4b f3 00 00 16 03  01 00 43 01 00 00 3f 03 |..K.......C...?.|
+  0040  03 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|
+  0050  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|
+  0060  00 00 00 02 13 01 01 00  00 14 00 00 00 10 00 0e |................|
+  0070  00 00 0b 65 78 61 6d 70  6c 65 2e 63 6f 6d       |...example.com|

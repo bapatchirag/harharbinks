@@ -1,0 +1,146 @@
+[
+  {
+    "index": 1,
+    "time": "2023-01-01T00:00:00Z",
+    "source": "192.168.1.100",
+    "dest": "192.168.1.1",
+    "protocol": "ARP",
+    "length": 60,
+    "info": "Who has 192.168.1.1? Tell 192.168.1.100"
+  },
+  {
+    "index": 2,
+    "time": "2023-01-01T00:00:00.01Z",
+    "source": "192.168.1.1",
+    "dest": "192.168.1.100",
+    "protocol": "ARP",
+    "length": 60,
+    "info": "192.168.1.1 is at bb:bb:bb:bb:bb:bb"
+  },
+  {
+    "index": 3,
+    "time": "2023-01-01T00:00:00.02Z",
+    "source": "192.168.1.100",
+    "dest": "192.168.1.1",
+    "protocol": "DNS",
+    "length": 71,
+    "info": "Standard query 0x1a2b A example.com"
+  },
+  {
+    "index": 4,
+    "time": "2023-01-01T00:00:00.03Z",
+    "source": "192.168.1.1",
+    "dest": "192.168.1.100",
+    "protocol": "DNS",
+    "length": 98,
+    "info": "Standard query response 0x1a2b A example.com A 93.184.216.34"
+  },
+  {
+    "index": 5,
+    "time": "2023-01-01T00:00:00.04Z",
+    "source": "192.168.1.100",
+    "dest": "93.184.216.34",
+    "protocol": "TCP",
+    "length": 60,
+    "info": "50001 → 80 [SYN] Seq=0 Win=64240 Len=0"
+  },
+  {
+    "index": 6,
+    "time": "2023-01-01T00:00:00.05Z",
+    "source": "93.184.216.34",
+    "dest": "192.168.1.100",
+    "protocol": "TCP",
+    "length": 60,
+    "info": "80 → 50001 [SYN, ACK] Seq=0 Ack=1 Win=64240 Len=0"
+  },
+  {
+    "index": 7,
+    "time": "2023-01-01T00:00:00.06Z",
+    "source": "192.168.1.100",
+    "dest": "93.184.216.34",
+    "protocol": "TCP",
+    "length": 60,
+    "info": "50001 → 80 [ACK] Seq=1 Ack=1 Win=64240 Len=0"
+  },
+  {
+    "index": 8,
+    "time": "2023-01-01T00:00:00.07Z",
+    "source": "192.168.1.100",
+    "dest": "93.184.216.34",
+    "protocol": "HTTP",
+    "length": 123,
+    "info": "GET /index.html HTTP/1.1"
+  },
+  {
+    "index": 9,
+    "time": "2023-01-01T00:00:00.08Z",
+    "source": "93.184.216.34",
+    "dest": "192.168.1.100",
+    "protocol": "HTTP",
+    "length": 131,
+    "info": "HTTP/1.1 200 OK"
+  },
+  {
+    "index": 10,
+    "time": "2023-01-01T00:00:00.09Z",
+    "source": "192.168.1.100",
+    "dest": "93.184.216.34",
+    "protocol": "TCP",
+    "length": 60,
+    "info": "50001 → 80 [ACK, FIN] Seq=70 Ack=78 Win=64240 Len=0"
+  },
+  {
+    "index": 11,
+    "time": "2023-01-01T00:00:00.1Z",
+    "source": "192.168.1.100",
+    "dest": "93.184.216.34",
+    "protocol": "TCP",
+    "length": 60,
+    "info": "50002 → 443 [SYN] Seq=0 Win=64240 Len=0"
+  },
+  {
+    "index": 12,
+    "time": "2023-01-01T00:00:00.11Z",
+    "source": "93.184.216.34",
+    "dest": "192.168.1.100",
+    "protocol": "TCP",
+    "length": 60,
+    "info": "443 → 50002 [SYN, ACK] Seq=0 Ack=1 Win=64240 Len=0"
+  },
+  {
+    "index": 13,
+    "time": "2023-01-01T00:00:00.12Z",
+    "source": "192.168.1.100",
+    "dest": "93.184.216.34",
+    "protocol": "TCP",
+    "length": 60,
+    "info": "50002 → 443 [ACK] Seq=1 Ack=1 Win=64240 Len=0"
+  },
+  {
+    "index": 14,
+    "time": "2023-01-01T00:00:00.13Z",
+    "source": "192.168.1.100",
+    "dest": "93.184.216.34",
+    "protocol": "TLS",
+    "length": 126,
+    "info": "TLS 1.2 Client Hello (SNI=example.com)"
+  },
+  {
+    "index": 15,
+    "time": "2023-01-01T00:00:00.14Z",
+    "source": "192.168.1.100",
+    "dest": "93.184.216.34",
+    "protocol": "ICMPv4",
+    "length": 60,
+    "info": "Echo (ping) request id=0x0001 seq=1"
+  },
+  {
+    "index": 16,
+    "time": "2023-01-01T00:00:00.15Z",
+    "source": "93.184.216.34",
+    "dest": "192.168.1.100",
+    "protocol": "ICMPv4",
+    "length": 60,
+    "info": "Echo (ping) reply id=0x0001 seq=1"
+  }
+]

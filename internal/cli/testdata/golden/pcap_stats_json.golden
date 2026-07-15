@@ -1,0 +1,56 @@
+{
+  "packets": 16,
+  "bytes": 1209,
+  "duration": "150ms",
+  "start": "2023-01-01T00:00:00Z",
+  "end": "2023-01-01T00:00:00.15Z",
+  "protocols": [
+    {
+      "protocol": "TCP",
+      "packets": 7,
+      "bytes": 420
+    },
+    {
+      "protocol": "ARP",
+      "packets": 2,
+      "bytes": 120
+    },
+    {
+      "protocol": "DNS",
+      "packets": 2,
+      "bytes": 169
+    },
+    {
+      "protocol": "HTTP",
+      "packets": 2,
+      "bytes": 254
+    },
+    {
+      "protocol": "ICMPv4",
+      "packets": 2,
+      "bytes": 120
+    },
+    {
+      "protocol": "TLS",
+      "packets": 1,
+      "bytes": 126
+    }
+  ],
+  "topTalkers": [
+    {
+      "address": "192.168.1.100",
+      "packets": 16,
+      "bytes": 1209
+    },
+    {
+      "address": "93.184.216.34",
+      "packets": 12,
+      "bytes": 920
+    },
+    {
+      "address": "192.168.1.1",
+      "packets": 4,
+      "bytes": 289
+    }
+  ]
+}
