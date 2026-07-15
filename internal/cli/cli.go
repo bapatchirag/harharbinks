@@ -92,7 +92,7 @@ func writeUsage(w io.Writer) {
 
 Usage:
   hhb                       Open the interactive file browser to pick a HAR file
-  hhb [file.har]            Open a HAR file in the interactive viewer
+  hhb [file]                Open a HAR or PCAP file in the interactive viewer
   hhb <command> [args]      Run a headless command
 
 HAR commands:

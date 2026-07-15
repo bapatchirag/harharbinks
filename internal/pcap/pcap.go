@@ -64,6 +64,24 @@ const (
 	magicPCAPNG        = 0x0a0d0d0a
 )
 
+// IsCapture reports whether header begins with the magic bytes of a supported
+// capture format — classic pcap (either byte order, microsecond or nanosecond
+// timestamps) or pcapng. It lets callers sniff a file's format from just its
+// first four bytes, without fully parsing it, so format routing can fall back to
+// content inspection when a file's extension is missing or misleading. A header
+// shorter than four bytes is never a capture.
+func IsCapture(header []byte) bool {
+	if len(header) < 4 {
+		return false
+	}
+	switch binary.BigEndian.Uint32(header) {
+	case magicPCAPMicros, magicPCAPMicrosSwp, magicPCAPNanos, magicPCAPNanosSwp, magicPCAPNG:
+		return true
+	default:
+		return false
+	}
+}
+
 // Parse reads an entire capture from r, auto-detecting the classic pcap and
 // pcapng formats by their leading magic bytes and decoding every record.
 func Parse(r io.Reader) (*Capture, error) {
