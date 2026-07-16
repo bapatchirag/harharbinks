@@ -1,0 +1,24 @@
+Capture Summary                                                                                     
+  Packets   16                                                                                      
+  Bytes     1.2KB                                                                                   
+  Duration  150ms                                                                                   
+  Start     2023-01-01 00:00:00.000000 UTC                                                          
+  End       2023-01-01 00:00:00.150000 UTC                                                          
+                                                                                                    
+Protocol Hierarchy                                                                                  
+  PROTOCOL    PACKETS   BYTES                                                                       
+  TCP         7         420B                                                                        
+  ARP         2         120B                                                                        
+  DNS         2         169B                                                                        
+  HTTP        2         254B                                                                        
+  ICMPv4      2         120B                                                                        
+  TLS         1         126B                                                                        
+                                                                                                    
+Top Talkers                                                                                         
+  ADDRESS             PACKETS   BYTES                                                               
+  192.168.1.100       16        1.2KB                                                               
+  93.184.216.34       12        920B                                                                
+  192.168.1.1         4         289B                                                                
+                                                                                                    
+                                                                                                    
+ statistics                                                          ↑/↓ scroll · esc back · ? help 

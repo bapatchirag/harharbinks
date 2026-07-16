@@ -75,7 +75,7 @@ func (b *Browser) Help() string {
 		"  up/down, j/k       move selection",
 		"  right/l, enter     open directory / select file",
 		"  left/h             parent directory",
-		"  pgup/pgdn          page          g / G  top / bottom",
+		"  ctrl+u/ctrl+d      page          g / G  top / bottom",
 		"  /                  filter entries in this directory",
 		"",
 		"General",

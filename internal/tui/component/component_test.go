@@ -601,6 +601,26 @@ func TestUnfocusedHexViewIgnoresInput(t *testing.T) {
 	}
 }
 
+// TestHexViewCursorHiddenWhenUnfocused checks that the cursor byte is highlighted
+// only while the view is focused, so moving to another pane leaves no byte
+// lingering under the cursor's highlight.
+func TestHexViewCursorHiddenWhenUnfocused(t *testing.T) {
+	th := theme.Default()
+	h := NewHexView(th, keymap.Default())
+	h.SetData(make([]byte, hexBytesPerRow*3))
+	h.SetSize(80, 4)
+	h.SetCursor(5)
+
+	h.Focus()
+	if got := h.cellStyle(5).GetBackground(); got != th.Selected().GetBackground() {
+		t.Error("focused cursor byte should use the Selected style")
+	}
+	h.Blur()
+	if got := h.cellStyle(5).GetBackground(); got != th.Base().GetBackground() {
+		t.Error("unfocused cursor byte should not stay highlighted")
+	}
+}
+
 func TestHexViewEmpty(t *testing.T) {
 	h := NewHexView(theme.Default(), keymap.Default())
 	h.SetSize(80, 4)

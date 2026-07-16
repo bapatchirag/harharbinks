@@ -61,3 +61,36 @@ func TestFlowDuration(t *testing.T) {
 		t.Errorf("dns flow duration = %v, want 10ms", got)
 	}
 }
+
+// TestFlowAt returns the conversation a packet belongs to together with the
+// packet's position within it, and reports frames outside any conversation.
+func TestFlowAt(t *testing.T) {
+	c := loadSample(t)
+	// Frame 8 (the HTTP GET) is the 4th frame of the port-80 conversation
+	// (frames 5, 6, 7, 8, …), so its position within the flow is 3.
+	f, pos, ok := FlowAt(c.Packets, 8)
+	if !ok {
+		t.Fatal("frame 8 should belong to a flow")
+	}
+	if f.Protocol != "TCP" || f.DstPort != 80 {
+		t.Errorf("frame 8 flow = %s :%d, want TCP :80", f.Protocol, f.DstPort)
+	}
+	if pos != 3 {
+		t.Errorf("frame 8 position within its flow = %d, want 3", pos)
+	}
+	if want := []int{5, 6, 7, 8, 9, 10}; len(f.Indices) != len(want) {
+		t.Errorf("flow frames = %v, want %v", f.Indices, want)
+	}
+
+	// ARP (frame 1) is not part of any TCP or UDP conversation.
+	if _, _, ok := FlowAt(c.Packets, 1); ok {
+		t.Error("ARP frame 1 should not belong to any flow")
+	}
+	// Indices outside the capture are rejected.
+	if _, _, ok := FlowAt(c.Packets, 0); ok {
+		t.Error("index 0 is out of range")
+	}
+	if _, _, ok := FlowAt(c.Packets, len(c.Packets)+1); ok {
+		t.Error("index past the end is out of range")
+	}
+}

@@ -174,7 +174,7 @@ func (m *model) buildDemos() []demo {
 			update: m.list.Update,
 		},
 		{
-			name: "Viewport", hint: "↑/↓ · pgup/pgdn scroll",
+			name: "Viewport", hint: "↑/↓ · ctrl+u/ctrl+d scroll",
 			view:  func() string { return m.view.View() },
 			focus: m.view.Focus, blur: m.view.Blur,
 			update: m.view.Update,
@@ -186,7 +186,7 @@ func (m *model) buildDemos() []demo {
 			update: m.tree.Update,
 		},
 		{
-			name: "HexView", hint: "←/→/↑/↓ move byte cursor · pgup/pgdn page",
+			name: "HexView", hint: "←/→/↑/↓ move byte cursor · ctrl+u/ctrl+d page",
 			view:  func() string { return m.hex.View() },
 			focus: m.hex.Focus, blur: m.hex.Blur,
 			update: m.hex.Update,
@@ -409,7 +409,7 @@ func main() {
 
 const sampleProse = `harharbinks — offline HAR & PCAP viewer + security auditor
 
-This viewport scrolls. Use the arrow keys, PageUp/PageDown, Home and End.
+This viewport scrolls. Use the arrow keys, Ctrl+U/Ctrl+D, Home and End.
 
 The component library is deliberately format-agnostic: none of these widgets
 knows anything about HAR entries, PCAP packets, or audit findings. Screens in

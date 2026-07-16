@@ -51,12 +51,12 @@ func Default() KeyMap {
 			key.WithHelp("→/l", "right"),
 		),
 		PageUp: key.NewBinding(
-			key.WithKeys("pgup", "b"),
-			key.WithHelp("pgup", "page up"),
+			key.WithKeys("ctrl+u"),
+			key.WithHelp("ctrl+u", "page up"),
 		),
 		PageDown: key.NewBinding(
-			key.WithKeys("pgdown", "f"),
-			key.WithHelp("pgdn", "page down"),
+			key.WithKeys("ctrl+d"),
+			key.WithHelp("ctrl+d", "page down"),
 		),
 		Home: key.NewBinding(
 			key.WithKeys("home", "g"),

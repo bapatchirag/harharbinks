@@ -84,3 +84,22 @@ func Flows(packets []Packet) []Flow {
 	}
 	return out
 }
+
+// FlowAt returns the flow containing the packet at the given 1-based index,
+// together with that packet's position within the flow's member frames. It backs
+// the follow view, which scopes the packet list to a single conversation. The
+// bool is false when the index is out of range or the packet is not part of any
+// TCP or UDP conversation (for example ARP or ICMP).
+func FlowAt(packets []Packet, index int) (Flow, int, bool) {
+	if index < 1 || index > len(packets) {
+		return Flow{}, -1, false
+	}
+	for _, f := range Flows(packets) {
+		for pos, idx := range f.Indices {
+			if idx == index {
+				return f, pos, true
+			}
+		}
+	}
+	return Flow{}, -1, false
+}
