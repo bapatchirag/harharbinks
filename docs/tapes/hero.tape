@@ -4,6 +4,10 @@
 # Requires the binary at ./bin/hhb (the `screenshots` make target builds it first)
 # and vhs (https://github.com/charmbracelet/vhs). The output GIF is optimized by
 # gifsicle in the make target.
+#
+# The reel runs in two acts — the HAR viewer, then the PCAP viewer. Between them
+# the HAR viewer is quit and the capture opened while hidden, so the GIF cuts
+# straight from one to the other with no shell prompt in view.
 
 Output docs/images/hero.gif
 
@@ -14,7 +18,9 @@ Set Padding 20
 Set TypingSpeed 55ms
 Set Framerate 24
 
-# Launch the viewer on the bundled sample capture (the shell command is hidden).
+# --- Act 1: the HAR viewer ---
+
+# Launch the viewer on the bundled sample HAR (the shell command is hidden).
 Hide
 Type "./bin/hhb testdata/sample.har"
 Enter
@@ -41,24 +47,63 @@ Sleep 400ms
 # Filter with a scoped field:value query.
 Type "/"
 Type "method:POST"
-Sleep 1.2s
-Escape
-Sleep 600ms
-
-# Open the export menu (copy URL, copy as cURL, save the body).
-Type "e"
-Sleep 1.2s
-Escape
-Sleep 500ms
-
-# Switch the color theme live from the settings editor.
-Type "c"
-Sleep 600ms
-Right@520ms 2
-Sleep 900ms
+Sleep 1.3s
 Escape
 Sleep 700ms
 
-# Quit.
+# --- Act 2: the PCAP viewer ---
+
+# Quit the HAR viewer and relaunch on the bundled capture, both hidden, so the
+# reel cuts straight into the PCAP viewer with no shell prompt in view.
+Hide
 Type "q"
+Sleep 700ms
+Type "./bin/hhb testdata/sample.pcap"
+Enter
+Sleep 1.5s
+Show
+
+# Browse the packet list to an HTTP request (frame 8).
 Sleep 600ms
+Down@300ms 7
+Sleep 700ms
+
+# Inspect the packet: focus the layer tree and expand a layer so the bytes it
+# spans light up in the hex view, then step through its fields.
+Tab
+Sleep 500ms
+Down@260ms 2
+Sleep 300ms
+Right
+Sleep 900ms
+Down@360ms 2
+Sleep 1.1s
+
+# Follow the packet's conversation: return focus to the list, then scope it.
+Tab
+Sleep 200ms
+Tab
+Sleep 400ms
+Enter
+Sleep 1.3s
+Escape
+Sleep 600ms
+
+# Open the conversations (flows) view from the views menu (mnemonic 'f').
+Type "e"
+Sleep 700ms
+Type "f"
+Sleep 1.3s
+Escape
+Sleep 600ms
+
+# Open the capture-statistics view (mnemonic 's').
+Type "e"
+Sleep 700ms
+Type "s"
+Sleep 1.6s
+
+# Quit (hidden, so the reel ends on the statistics view, not a shell prompt).
+Hide
+Escape
+Type "q"

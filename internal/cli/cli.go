@@ -91,7 +91,7 @@ func writeUsage(w io.Writer) {
 	fmt.Fprintf(w, `%s — an offline HAR & PCAP inspector
 
 Usage:
-  hhb                       Open the interactive file browser to pick a HAR file
+  hhb                       Open the interactive file browser to pick a file
   hhb [file]                Open a HAR or PCAP file in the interactive viewer
   hhb <command> [args]      Run a headless command
 

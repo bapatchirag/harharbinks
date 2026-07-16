@@ -89,13 +89,73 @@ Tab
 Sleep 500ms
 
 # 8) File browser (a full-window screen, captured last so its transition does
-#    not swallow the next screen's opening key): pick a .har file from testdata/.
+#    not swallow the next screen's opening key): pick a file from testdata/,
+#    which now holds sample.har alongside sample.pcap and sample.pcapng.
 Type "o"
 Sleep 1s
 Screenshot docs/images/browser.png
 Sleep 400ms
 Escape
 Sleep 500ms
+
+# Quit the HAR viewer and reopen on the bundled packet capture for the PCAP
+# stills. sample.pcap sits beside sample.har in testdata/, the shell's cwd.
+Type "q"
+Sleep 500ms
+Hide
+Type "../bin/hhb sample.pcap"
+Enter
+Sleep 1.5s
+Show
+Sleep 700ms
+
+# 9) PCAP viewer: the packet list on top, with the layer tree and hex view below.
+#    Move to an HTTP packet (frame 8) for a fuller layer stack, focus the layer
+#    tree, and expand a layer so the bytes it spans are highlighted in the hex.
+Down@150ms 7
+Sleep 500ms
+Tab
+Sleep 400ms
+Down@180ms 2
+Sleep 300ms
+Right
+Sleep 500ms
+Screenshot docs/images/pcap-main.png
+Sleep 400ms
+
+# Return focus to the packet list (tree -> hex -> list).
+Tab
+Sleep 200ms
+Tab
+Sleep 400ms
+
+# 10) Follow a conversation: scope the list to the selected packet's flow.
+Enter
+Sleep 800ms
+Screenshot docs/images/pcap-follow.png
+Sleep 400ms
+Escape
+Sleep 600ms
+
+# 11) Conversations (flows): the views menu's first entry (mnemonic 'f').
+Type "e"
+Sleep 500ms
+Type "f"
+Sleep 800ms
+Screenshot docs/images/pcap-flows.png
+Sleep 400ms
+Escape
+Sleep 600ms
+
+# 12) Capture statistics: the views menu's second entry (mnemonic 's').
+Type "e"
+Sleep 500ms
+Type "s"
+Sleep 800ms
+Screenshot docs/images/pcap-stats.png
+Sleep 400ms
+Escape
+Sleep 600ms
 
 # Quit.
 Type "q"
