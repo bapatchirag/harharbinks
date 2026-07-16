@@ -104,7 +104,7 @@ Controls:
 |-----|--------|
 | `↑`/`↓` (`k`/`j`) | Move the selection |
 | `←`/`→` (`h`/`l`) | Switch detail tabs |
-| `pgup`/`pgdn`, `g`/`G` | Page / jump within the detail pane |
+| `ctrl+u`/`ctrl+d`, `g`/`G` | Page / jump within the detail pane |
 | `tab` / `shift+tab` | Move focus between the list and the detail pane |
 | `enter` | Follow the selected entry's session |
 | `/` | Search / filter (`field:value` or free text) |

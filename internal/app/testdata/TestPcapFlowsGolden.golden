@@ -1,0 +1,24 @@
+  PROTO  SOURCE                 DEST                   PACKETS  BYTES     DURATION                  
+› UDP    192.168.1.100:50000    192.168.1.1:53         2        169B      10ms                      
+  TCP    192.168.1.100:50001    93.184.216.34:80       6        494B      50ms                      
+  TCP    192.168.1.100:50002    93.184.216.34:443      4        306B      30ms                      
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ 1/3                                       conversations           enter follow · esc back · ? help 

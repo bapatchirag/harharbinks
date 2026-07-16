@@ -217,15 +217,14 @@ func (h *HexView) renderRow(r int) string {
 	return b.String()
 }
 
-// cellStyle returns the style for the byte at idx. The cursor byte takes
-// precedence — a solid highlight when focused, an accent when not — followed by
-// the externally set highlight range, then the plain base style.
+// cellStyle returns the style for the byte at idx. The cursor byte is painted
+// only while the view is focused (a solid highlight), so moving to another pane
+// leaves no byte lingering under the cursor's highlight. The externally set
+// highlight range is next in precedence, then the plain base style.
 func (h *HexView) cellStyle(idx int) lipgloss.Style {
 	switch {
-	case idx == h.cursor && h.focused:
+	case h.focused && idx == h.cursor:
 		return h.theme.Selected()
-	case idx == h.cursor:
-		return h.theme.Title()
 	case h.hlLen > 0 && idx >= h.hlStart && idx < h.hlStart+h.hlLen:
 		return h.rangeStyle()
 	default:

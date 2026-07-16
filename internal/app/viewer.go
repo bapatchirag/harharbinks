@@ -146,7 +146,7 @@ func (v *Viewer) Help() string {
 		"",
 		"List focused",
 		"  up/down, j/k       move selection",
-		"  pgup/pgdn, b/f     page          g / G  top / bottom",
+		"  ctrl+u/ctrl+d      page          g / G  top / bottom",
 		"  /                  filter \u2014 text, or field:value (esc clears)",
 		"                       fields: method url host status header cookie",
 		"                               mime body query server conn",
@@ -157,7 +157,7 @@ func (v *Viewer) Help() string {
 		"",
 		"Detail focused",
 		"  left/right, h/l    previous / next tab",
-		"  up/down, j/k       scroll body   pgup/pgdn page",
+		"  up/down, j/k       scroll body   ctrl+u/ctrl+d page",
 	}, "\n")
 }
 
