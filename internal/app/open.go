@@ -29,13 +29,30 @@ func Open(path string) (Screen, error) {
 		if err != nil {
 			return nil, err
 		}
-		return NewPcapViewer(c.Packets, path), nil
+		v := NewPcapViewer(c.Packets, path)
+		v.SetNotice(captureNotice(c))
+		return v, nil
 	}
 	h, err := har.ParseFile(path)
 	if err != nil {
 		return nil, err
 	}
 	return NewViewer(h.Log.Entries, path), nil
+}
+
+// captureNotice returns a short warning to show in the PCAP viewer when a capture
+// opened with caveats — it was truncated mid-record, or its link type cannot be
+// decoded into protocols (so frames are shown as raw bytes). It is empty for a
+// clean, fully-decodable capture.
+func captureNotice(c *pcap.Capture) string {
+	var notes []string
+	if !c.Decodable() {
+		notes = append(notes, "unsupported link type ("+c.LinkTypeName()+")")
+	}
+	if c.Truncated {
+		notes = append(notes, "truncated capture")
+	}
+	return strings.Join(notes, " \u00b7 ")
 }
 
 // looksLikeCapture reports whether path should be opened as a packet capture. It

@@ -110,6 +110,7 @@ func cmdPcapLs(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
+	noteCapture(stderr, c)
 	packets, err := selectPackets(c.Packets, f)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
@@ -149,6 +150,7 @@ func cmdPcapShow(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
+	noteCapture(stderr, c)
 	if idx < 1 || idx > len(c.Packets) {
 		fmt.Fprintf(stderr, "packet %d out of range (1..%d)\n", idx, len(c.Packets))
 		return 1
@@ -187,6 +189,7 @@ func cmdPcapFlows(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
+	noteCapture(stderr, c)
 	flows := pcap.Flows(c.Packets)
 	if *asJSON {
 		if err := writeFlowsJSON(stdout, flows); err != nil {
@@ -221,6 +224,7 @@ func cmdPcapStats(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
+	noteCapture(stderr, c)
 	s := pcap.Summarize(c.Packets)
 	if *asJSON {
 		if err := writeStatsJSON(stdout, s); err != nil {
@@ -254,6 +258,19 @@ func loadCapture(path string) (*pcap.Capture, error) {
 		return pcap.Parse(os.Stdin)
 	}
 	return pcap.ParseFile(path)
+}
+
+// noteCapture prints a one-line warning to stderr when a capture opened with a
+// caveat: it was truncated mid-record, or its link type cannot be decoded (so
+// frames are shown as raw bytes). Warnings go to stderr, keeping stdout — text
+// or JSON — clean and pipeable.
+func noteCapture(stderr io.Writer, c *pcap.Capture) {
+	if !c.Decodable() {
+		fmt.Fprintf(stderr, "note: unsupported link type %s; showing raw frames\n", c.LinkTypeName())
+	}
+	if c.Truncated {
+		fmt.Fprintf(stderr, "note: capture is truncated; showing the %d frame(s) read before the break\n", len(c.Packets))
+	}
 }
 
 // captureStart returns the timestamp of the capture's first packet, used as the

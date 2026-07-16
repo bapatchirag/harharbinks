@@ -1,11 +1,16 @@
 package pcap
 
 import (
+	"bytes"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/pcapgo"
 )
 
 const (
@@ -91,5 +96,93 @@ func TestPcapDoesNotImportHAR(t *testing.T) {
 	}
 	if strings.Contains(string(out), "harharbinks/internal/har") {
 		t.Error("internal/pcap must not depend on internal/har")
+	}
+}
+
+// TestParseTruncatedKeepsPackets verifies that a capture cut off mid-record is
+// read up to the break: the frames before it are kept and the capture is flagged
+// truncated, rather than the whole read failing.
+func TestParseTruncatedKeepsPackets(t *testing.T) {
+	raw, err := os.ReadFile(samplePCAP)
+	if err != nil {
+		t.Fatalf("read %s: %v", samplePCAP, err)
+	}
+	// Drop the final bytes so the last record's data is incomplete while its
+	// header — and every earlier frame — stays intact.
+	cut := raw[:len(raw)-8]
+	c, err := Parse(bytes.NewReader(cut))
+	if err != nil {
+		t.Fatalf("Parse(truncated) returned error: %v", err)
+	}
+	if !c.Truncated {
+		t.Error("a capture cut mid-record should set Capture.Truncated")
+	}
+	full := loadSample(t)
+	if n := len(c.Packets); n == 0 || n >= len(full.Packets) {
+		t.Errorf("truncated packets = %d, want between 1 and %d", n, len(full.Packets)-1)
+	}
+	for i, p := range c.Packets {
+		if p.Index != i+1 {
+			t.Errorf("kept packet %d has Index %d, want %d", i, p.Index, i+1)
+		}
+	}
+}
+
+// TestParseCleanCaptureNotTruncated confirms a complete capture is not flagged
+// truncated.
+func TestParseCleanCaptureNotTruncated(t *testing.T) {
+	if loadSample(t).Truncated {
+		t.Error("a complete capture must not be flagged truncated")
+	}
+}
+
+// TestCaptureDecodable confirms the Ethernet sample reports a decodable link
+// type and a human-readable link-type name.
+func TestCaptureDecodable(t *testing.T) {
+	c := loadSample(t)
+	if !c.Decodable() {
+		t.Error("the Ethernet sample capture should be decodable")
+	}
+	if c.LinkTypeName() == "" {
+		t.Error("LinkTypeName should name the link type")
+	}
+}
+
+// TestEmptyCaptureDecodable confirms an empty capture is treated as decodable —
+// there is no undecodable frame to warn about.
+func TestEmptyCaptureDecodable(t *testing.T) {
+	if !(&Capture{}).Decodable() {
+		t.Error("an empty capture should be decodable")
+	}
+}
+
+// TestUnsupportedLinkTypeNotDecodable builds a tiny capture on a link type
+// gopacket cannot decode (LINKTYPE_USER0) and verifies the frame is still read
+// but the capture reports itself undecodable, so a caller can warn and fall back
+// to a raw view.
+func TestUnsupportedLinkTypeNotDecodable(t *testing.T) {
+	const linkTypeUser0 = layers.LinkType(147)
+	var buf bytes.Buffer
+	w := pcapgo.NewWriter(&buf)
+	if err := w.WriteFileHeader(65536, linkTypeUser0); err != nil {
+		t.Fatalf("write file header: %v", err)
+	}
+	frame := []byte{0xde, 0xad, 0xbe, 0xef}
+	ci := gopacket.CaptureInfo{Timestamp: time.Unix(0, 0), CaptureLength: len(frame), Length: len(frame)}
+	if err := w.WritePacket(ci, frame); err != nil {
+		t.Fatalf("write packet: %v", err)
+	}
+	c, err := Parse(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("Parse(user-link) returned error: %v", err)
+	}
+	if len(c.Packets) != 1 {
+		t.Fatalf("packets = %d, want 1", len(c.Packets))
+	}
+	if c.Decodable() {
+		t.Error("a capture on an undecodable link type should report Decodable() == false")
+	}
+	if c.LinkType != linkTypeUser0 {
+		t.Errorf("link type = %v, want %v", c.LinkType, linkTypeUser0)
 	}
 }

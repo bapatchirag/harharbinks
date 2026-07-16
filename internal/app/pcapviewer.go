@@ -85,7 +85,8 @@ type PcapViewer struct {
 	packets []pcap.Packet
 	start   time.Time
 	title   string
-	curIdx  int // table row currently mirrored in the detail, or -1 when none
+	notice  string // capture caveat (truncated / unsupported link type), or ""
+	curIdx  int    // table row currently mirrored in the detail, or -1 when none
 
 	// View state driving the packet list and the mode the viewer is in.
 	mode      pcapMode
@@ -177,6 +178,14 @@ func newPcapMenu(th theme.Theme, km keymap.KeyMap) *component.Menu {
 	}, th, km)
 	m.SetTitle("Views")
 	return m
+}
+
+// SetNotice records a short caveat about the open capture (for example that it
+// was truncated or uses a link type that cannot be decoded), shown in the status
+// bar and in the empty-capture message. An empty string clears it.
+func (v *PcapViewer) SetNotice(note string) {
+	v.notice = note
+	v.refreshStatus()
 }
 
 // Title implements Screen, naming the open capture and the active view in the
@@ -722,9 +731,12 @@ func (v *PcapViewer) View() string {
 	case modeStats:
 		body = v.stats.View()
 	default:
-		if v.hasDetail {
+		switch {
+		case len(v.table.Rows()) == 0:
+			body = v.emptyBody()
+		case v.hasDetail:
 			body = layout.SplitVertical(v.table.View(), v.detail.View())
-		} else {
+		default:
 			body = v.table.View()
 		}
 	}
@@ -736,6 +748,31 @@ func (v *PcapViewer) View() string {
 		return layout.Center(base, box)
 	}
 	return base
+}
+
+// emptyBody renders the centered placeholder shown in the packet-list mode when
+// the list has no rows — the capture is empty, was truncated to nothing, or the
+// active filter matched none. It fills the area above the status bar so the bar
+// stays pinned to the bottom.
+func (v *PcapViewer) emptyBody() string {
+	h := v.height - 1
+	if h < 1 {
+		h = 1
+	}
+	return layout.Place(v.width, h, v.theme.MutedText().Render(v.emptyMessage()))
+}
+
+// emptyMessage is the placeholder text for an empty packet list. It distinguishes
+// a filter that matched nothing from a capture with no packets, and folds in any
+// capture notice (such as a truncated capture) so the reason is visible.
+func (v *PcapViewer) emptyMessage() string {
+	if len(v.packets) > 0 && v.query != "" {
+		return fmt.Sprintf("No packets match %q.\nPress esc to clear the filter.", v.query)
+	}
+	if v.notice != "" {
+		return "This capture has no packets to show (" + v.notice + ")."
+	}
+	return "This capture contains no packets."
 }
 
 // refreshStatus updates the status bar for the active mode: the cursor position
@@ -762,15 +799,21 @@ func (v *PcapViewer) refreshStatus() {
 }
 
 // refreshPacketStatus fills the status bar for the packet-list mode: the position
-// over the shown count, the active filter and sort in the center, and pane-aware
-// key hints on the right.
+// over the shown count (with any capture caveat) on the left, the active filter
+// and sort in the center, and pane-aware key hints on the right.
 func (v *PcapViewer) refreshPacketStatus() {
 	n := len(v.table.Rows())
 	pos := 0
 	if n > 0 {
 		pos = v.table.Cursor() + 1
 	}
-	v.status.SetLeft(fmt.Sprintf(" %d/%d ", pos, n))
+	// The capture caveat rides on the left, beside the count: the center can be
+	// clobbered by the wide key-hint segment, and the left segment stays clear.
+	if v.notice != "" {
+		v.status.SetLeft(fmt.Sprintf(" %d/%d \u00b7 %s ", pos, n, v.notice))
+	} else {
+		v.status.SetLeft(fmt.Sprintf(" %d/%d ", pos, n))
+	}
 
 	if v.followMode {
 		// The header already names the followed conversation, so the center just

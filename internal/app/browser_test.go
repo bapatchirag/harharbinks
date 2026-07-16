@@ -45,6 +45,26 @@ func TestBrowserOpensViewerOnSelect(t *testing.T) {
 	}
 }
 
+// TestBrowserOpensPcapViewerOnSelect verifies that choosing a capture file routes
+// through format detection and hands off to the PCAP viewer, not the HAR viewer.
+func TestBrowserOpensPcapViewerOnSelect(t *testing.T) {
+	a := New(NewBrowser())
+	var m tea.Model = a
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
+
+	_, cmd := m.Update(msg.FileSelectedMsg{Path: "../../testdata/sample.pcap"})
+	if cmd == nil {
+		t.Fatal("selecting a capture should return a switch command")
+	}
+	sw, ok := cmd().(SwitchScreenMsg)
+	if !ok {
+		t.Fatalf("expected SwitchScreenMsg, got %T", cmd())
+	}
+	if _, ok := sw.Screen.(*PcapViewer); !ok {
+		t.Fatalf("selecting a .pcap should switch to a *PcapViewer, got %T", sw.Screen)
+	}
+}
+
 // TestBrowserTeatestOpensViewer drives the whole program: an injected selection
 // switches to the viewer, whose list-focused status hints then appear.
 func TestBrowserTeatestOpensViewer(t *testing.T) {
