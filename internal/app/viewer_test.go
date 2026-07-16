@@ -40,10 +40,19 @@ func TestViewerFilter(t *testing.T) {
 	tm.Send(runeKey('/'))
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("cdn")})
 
+	// teatest.WaitFor tees every frame ever rendered into one growing buffer that
+	// is never reset, so a negative assertion (the "users?page=2" row is gone) can
+	// never come true once the initial unfiltered frame has been flushed — which is
+	// exactly what happens under load on slower CI runners, making the old check a
+	// guaranteed timeout there. Wait instead for a positive, monotonic marker: the
+	// open filter line echoing the typed query ("/ cdn", unique since it is not a
+	// substring of "cdn.example.com"). Because bubbletea serializes Update calls,
+	// the frame that prints "/ cdn" has already processed the SearchMsg that
+	// applies the filter; the authoritative row count is asserted on the final
+	// model below.
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
-		return bytes.Contains(b, []byte("cdn.example.com/app.js")) &&
-			!bytes.Contains(b, []byte("users?page=2"))
-	}, teatest.WithDuration(3*time.Second))
+		return bytes.Contains(b, []byte("/ cdn"))
+	}, teatest.WithDuration(10*time.Second))
 
 	if err := tm.Quit(); err != nil {
 		t.Fatalf("quit: %v", err)
