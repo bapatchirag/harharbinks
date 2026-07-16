@@ -29,7 +29,31 @@ type Capture struct {
 	Packets []Packet
 	// LinkType is the link-layer type used to decode every packet (e.g. Ethernet).
 	LinkType layers.LinkType
+	// Truncated reports that the capture ended mid-record — the file was cut off
+	// (a partial download, an interrupted write) rather than closed cleanly. The
+	// frames read before the break are still present in Packets; only the final,
+	// incomplete record was dropped.
+	Truncated bool
 }
+
+// Decodable reports whether the capture's link-layer type can be decoded into
+// recognizable protocol layers. It is true for an empty capture and for the
+// common link types (Ethernet, raw IP, and the like); it is false when frames
+// were captured on a link type gopacket has no decoder for, in which case the
+// frames are still listed but as opaque raw bytes. Callers use it to warn that a
+// capture's link type is unsupported.
+func (c *Capture) Decodable() bool {
+	if len(c.Packets) == 0 {
+		return true
+	}
+	pkt := c.Packets[0].decoded
+	return pkt.LinkLayer() != nil || pkt.NetworkLayer() != nil
+}
+
+// LinkTypeName returns a human-readable name for the capture's link-layer type
+// (e.g. "Ethernet"), suitable for a status line or an "unsupported link type"
+// notice.
+func (c *Capture) LinkTypeName() string { return c.LinkType.String() }
 
 // Packet is a single captured frame plus its lazily-decoded protocol layers. The
 // raw bytes are retained so callers can render a hex view or re-decode on demand.
@@ -99,6 +123,14 @@ func Parse(r io.Reader) (*Capture, error) {
 	for i := 0; ; i++ {
 		data, ci, err := src.ReadPacketData()
 		if errors.Is(err, io.EOF) {
+			break
+		}
+		if errors.Is(err, io.ErrUnexpectedEOF) {
+			// The capture ends mid-record: keep the frames read so far and flag the
+			// break rather than discarding a partial capture. This is the common
+			// truncated-file case (an interrupted transfer or a snap of a live
+			// capture), which should still open and inspect.
+			c.Truncated = true
 			break
 		}
 		if err != nil {

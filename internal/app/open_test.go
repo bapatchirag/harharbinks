@@ -1,9 +1,18 @@
 package app
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/pcapgo"
+
+	"github.com/bapatchirag/harharbinks/internal/pcap"
 )
 
 // TestOpenRoutesByFormat verifies Open returns the right screen for each sample
@@ -74,4 +83,41 @@ func TestLooksLikeCaptureSniffsUnknownExtension(t *testing.T) {
 	if looksLikeCapture(filepath.Join(dir, "does-not-exist")) {
 		t.Error("a missing, extension-less file should default to HAR handling")
 	}
+}
+
+// TestCaptureNotice verifies the viewer caveat string reflects a capture's state:
+// empty for a clean capture, naming a truncation, and naming an undecodable link
+// type.
+func TestCaptureNotice(t *testing.T) {
+	if got := captureNotice(&pcap.Capture{}); got != "" {
+		t.Errorf("clean capture notice = %q, want empty", got)
+	}
+	if got := captureNotice(&pcap.Capture{Truncated: true}); !strings.Contains(got, "truncated") {
+		t.Errorf("truncated notice = %q, want it to mention truncation", got)
+	}
+	note := captureNotice(unsupportedCapture(t))
+	if !strings.Contains(note, "unsupported link type") {
+		t.Errorf("unsupported-link notice = %q, want it to mention the link type", note)
+	}
+}
+
+// unsupportedCapture builds a one-frame capture on LINKTYPE_USER0, a link type
+// gopacket cannot decode, so Capture.Decodable reports false.
+func unsupportedCapture(t *testing.T) *pcap.Capture {
+	t.Helper()
+	var buf bytes.Buffer
+	w := pcapgo.NewWriter(&buf)
+	if err := w.WriteFileHeader(65536, layers.LinkType(147)); err != nil {
+		t.Fatalf("write file header: %v", err)
+	}
+	frame := []byte{0xde, 0xad, 0xbe, 0xef}
+	ci := gopacket.CaptureInfo{Timestamp: time.Unix(0, 0), CaptureLength: len(frame), Length: len(frame)}
+	if err := w.WritePacket(ci, frame); err != nil {
+		t.Fatalf("write packet: %v", err)
+	}
+	c, err := pcap.Parse(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("parse crafted capture: %v", err)
+	}
+	return c
 }

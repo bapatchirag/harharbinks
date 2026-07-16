@@ -74,15 +74,43 @@ func TestPcapViewerColumns(t *testing.T) {
 }
 
 // TestPcapViewerEmpty verifies the viewer renders without panicking over an empty
-// capture and reports a zero position.
+// capture, explains there are no packets, and reports a zero position.
 func TestPcapViewerEmpty(t *testing.T) {
 	v := NewPcapViewer(nil, "empty.pcap")
 	v.SetSize(100, 23)
-	if got := v.View(); got == "" {
+	out := v.View()
+	if out == "" {
 		t.Error("empty viewer should still render a frame")
+	}
+	if !strings.Contains(out, "no packets") {
+		t.Errorf("empty capture should explain there are no packets; view:\n%s", out)
 	}
 	if _, ok := v.table.Selected(); ok {
 		t.Error("empty capture should have no selection")
+	}
+}
+
+// TestPcapViewerFilterEmptyMessage verifies that a filter matching no packets
+// shows a distinct placeholder inviting the user to clear it, rather than the
+// empty-capture message.
+func TestPcapViewerFilterEmptyMessage(t *testing.T) {
+	v := sizedPcapViewer(t)
+	v.Update(msg.SearchMsg{Query: "proto:nonesuch"})
+	if got := len(v.table.Rows()); got != 0 {
+		t.Fatalf("filter should match nothing; got %d rows", got)
+	}
+	if out := v.View(); !strings.Contains(out, "No packets match") {
+		t.Errorf("filtered-empty view should invite clearing the filter; view:\n%s", out)
+	}
+}
+
+// TestPcapViewerNotice verifies a capture caveat set via SetNotice (for example a
+// truncated capture) appears in the packet-list status bar.
+func TestPcapViewerNotice(t *testing.T) {
+	v := sizedPcapViewer(t)
+	v.SetNotice("truncated capture")
+	if out := v.View(); !strings.Contains(out, "truncated capture") {
+		t.Errorf("notice should appear in the status bar; view:\n%s", out)
 	}
 }
 

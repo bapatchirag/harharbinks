@@ -6,6 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/pcapgo"
 )
 
 const samplePCAP = "../../testdata/sample.pcap"
@@ -115,5 +120,58 @@ func TestPcapNoInputAtTerminal(t *testing.T) {
 		if out.Len() != 0 {
 			t.Errorf("run(%v) unexpected stdout: %q", args, out.String())
 		}
+	}
+}
+
+// TestPcapLsTruncatedNote verifies a capture cut off mid-record still lists the
+// frames read before the break on stdout while warning about the truncation on
+// stderr, keeping stdout clean and the exit code successful.
+func TestPcapLsTruncatedNote(t *testing.T) {
+	raw, err := os.ReadFile(samplePCAP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "truncated.pcap")
+	if err := os.WriteFile(path, raw[:len(raw)-8], 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var out, errOut bytes.Buffer
+	if code := run([]string{"pcap", "ls", path}, "dev", &out, &errOut); code != 0 {
+		t.Fatalf("exit = %d, want 0; stderr=%q", code, errOut.String())
+	}
+	if !strings.Contains(errOut.String(), "truncated") {
+		t.Errorf("stderr should warn about truncation; got %q", errOut.String())
+	}
+	if out.Len() == 0 {
+		t.Error("stdout should still list the frames read before the break")
+	}
+}
+
+// TestPcapLsUnsupportedLinkNote verifies a capture on a link type gopacket cannot
+// decode still lists its frames while warning about the unsupported link type on
+// stderr.
+func TestPcapLsUnsupportedLinkNote(t *testing.T) {
+	var buf bytes.Buffer
+	w := pcapgo.NewWriter(&buf)
+	if err := w.WriteFileHeader(65536, layers.LinkType(147)); err != nil {
+		t.Fatal(err)
+	}
+	frame := []byte{0xde, 0xad, 0xbe, 0xef}
+	ci := gopacket.CaptureInfo{Timestamp: time.Unix(0, 0), CaptureLength: len(frame), Length: len(frame)}
+	if err := w.WritePacket(ci, frame); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "user0.pcap")
+	if err := os.WriteFile(path, buf.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var out, errOut bytes.Buffer
+	if code := run([]string{"pcap", "ls", path}, "dev", &out, &errOut); code != 0 {
+		t.Fatalf("exit = %d, want 0; stderr=%q", code, errOut.String())
+	}
+	if !strings.Contains(errOut.String(), "unsupported link type") {
+		t.Errorf("stderr should warn about the unsupported link type; got %q", errOut.String())
 	}
 }

@@ -1,9 +1,10 @@
 // This file implements the file browser screen: a full-window, filterable file
-// browser used to choose a capture to open. It is the app-layer adapter around
-// the generic FileBrowser component — it restricts selection to HAR files, and
-// when the user picks one it loads the capture and hands off to the viewer. A
-// "/" search filters the current directory; esc clears that filter (and, for a
-// browser opened from the viewer, then steps back to it).
+// browser used to choose a file to open. It is the app-layer adapter around the
+// generic FileBrowser component — it restricts selection to HAR archives and
+// packet captures, and when the user picks one it detects the format, loads the
+// file, and hands off to the matching viewer. A "/" search filters the current
+// directory; esc clears that filter (and, for a browser opened from the viewer,
+// then steps back to it).
 package app
 
 import (
@@ -16,7 +17,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/bapatchirag/harharbinks/internal/har"
 	"github.com/bapatchirag/harharbinks/internal/tui/component"
 	"github.com/bapatchirag/harharbinks/internal/tui/keymap"
 	"github.com/bapatchirag/harharbinks/internal/tui/layout"
@@ -25,9 +25,9 @@ import (
 )
 
 // Browser is the file browser screen. It composes the generic FileBrowser
-// component with a status bar and adapts a chosen path into a loaded HAR viewer.
-// When back is non-nil, esc returns to that screen (the viewer that opened it)
-// rather than doing nothing.
+// component with a status bar and adapts a chosen path into the viewer that
+// matches the file's format (HAR or PCAP). When back is non-nil, esc returns to
+// that screen (the viewer that opened it) rather than doing nothing.
 type Browser struct {
 	theme     theme.Theme
 	keys      keymap.KeyMap
@@ -42,7 +42,8 @@ type Browser struct {
 }
 
 // NewBrowser returns a file browser rooted at the working directory, restricted
-// to HAR files. It is the entry screen when hhb is launched without a file.
+// to the file types hhb inspects — HAR archives and packet captures. It is the
+// entry screen when hhb is launched without a file.
 func NewBrowser() *Browser { return newBrowser(nil) }
 
 // NewBrowserReturning is like NewBrowser but remembers back as the screen to
@@ -56,7 +57,7 @@ func newBrowser(back Screen) *Browser {
 	b := &Browser{
 		theme:   th,
 		keys:    km,
-		browser: component.NewFileBrowser(th, []string{".har"}),
+		browser: component.NewFileBrowser(th, []string{".har", ".pcap", ".pcapng", ".cap"}),
 		search:  component.NewSearch(th, "filter files\u2026"),
 		status:  component.NewStatusBar(th),
 		back:    back,
@@ -191,17 +192,17 @@ func (b *Browser) cancelSearch() {
 	b.browser.SetFilter("")
 }
 
-// open loads the HAR at path and, on success, switches to a viewer over its
-// entries. A load failure is surfaced in the status bar and the browser stays
-// open so the user can pick another file.
+// open detects the file's format, loads it, and on success switches to the
+// matching viewer (HAR or PCAP). A load failure is surfaced in the status bar
+// and the browser stays open so the user can pick another file.
 func (b *Browser) open(path string) tea.Cmd {
-	h, err := har.ParseFile(path)
+	screen, err := Open(path)
 	if err != nil {
 		b.err = filepath.Base(path) + ": " + err.Error()
 		return nil
 	}
 	b.err = ""
-	return SwitchTo(NewViewer(h.Log.Entries, path))
+	return SwitchTo(screen)
 }
 
 // SetSize implements Screen, giving the picker the area between a one-line
@@ -274,7 +275,7 @@ func (b *Browser) refreshStatus() {
 	if q := b.browser.Filter(); q != "" {
 		b.status.SetLeft(fmt.Sprintf(" filter: %s ", q))
 	} else {
-		b.status.SetLeft(" select a .har file ")
+		b.status.SetLeft(" select a HAR or capture file ")
 	}
 	b.status.SetCenter("")
 	// →/← enter and leave directories; enter opens a dir or selects a file.

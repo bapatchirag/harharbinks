@@ -1,9 +1,9 @@
 // This file implements the PCAP conversations view: a table of the capture's
 // bidirectional TCP and UDP flows. It is the app-layer adapter that maps
 // pcap.Flow values into the generic Table component through per-column render
-// functions, so the component stays unaware of PCAP. Selecting a flow follows
-// its reassembled stream (see pcapstream.go); the enclosing viewer opens and
-// closes this view (see pcapviewer.go).
+// functions, so the component stays unaware of PCAP. Selecting a flow scopes the
+// packet list to that conversation's frames; the enclosing viewer opens and
+// closes this view and performs the follow (see pcapviewer.go).
 package app
 
 import (
