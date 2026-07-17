@@ -286,6 +286,10 @@ func TestPcapViewerStatsView(t *testing.T) {
 			t.Errorf("stats view should contain %q; view:\n%s", want, view)
 		}
 	}
+	v.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if v.mode != modePackets {
+		t.Error("esc should return from stats to the packet list")
+	}
 }
 
 // TestPcapViewerFollowFromList verifies enter on a packet scopes the list to its
