@@ -289,7 +289,7 @@ func (v *PcapViewer) handleKey(k tea.KeyMsg) tea.Cmd {
 	case modeFlows:
 		return v.handleFlowsKey(k)
 	case modeStats:
-		return v.stats.Update(k)
+		return v.handleStatsKey(k)
 	default:
 		return v.handlePacketsKey(k)
 	}
@@ -405,6 +405,18 @@ func (v *PcapViewer) handleFlowsKey(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	cmd := v.flows.Update(k)
+	v.refreshStatus()
+	return cmd
+}
+
+// handleStatsKey drives the statistics panel: esc returns to the packet list and
+// everything else scrolls the pane.
+func (v *PcapViewer) handleStatsKey(k tea.KeyMsg) tea.Cmd {
+	if key.Matches(k, v.keys.Back) {
+		v.showPackets()
+		return nil
+	}
+	cmd := v.stats.Update(k)
 	v.refreshStatus()
 	return cmd
 }
