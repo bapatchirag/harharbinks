@@ -51,8 +51,8 @@ github.com/google/go-github/v86 v86.0.0 h1:S/6aANJhwRm8EQmGKVML3j41yq0h2BsTP8FnD
 github.com/google/go-github/v86 v86.0.0/go.mod h1:zKv1l4SwDXNFMGByi2FWkq71KwSXqj/eQRZuqtmcot8=
 github.com/google/go-querystring v1.2.0 h1:yhqkPbu2/OH+V9BfpCVPZkNmUXhb2gBxJArfhIxNtP0=
 github.com/google/go-querystring v1.2.0/go.mod h1:8IFJqpSRITyJ8QhQ13bmbeMBDfmeEJZD5A0egEOmkqU=
-github.com/gopacket/gopacket v1.7.0 h1:GdmF8ytGnjtSvyy30CTZhIwX1ybDWH3Q0MNK0blIKzA=
-github.com/gopacket/gopacket v1.7.0/go.mod h1:QKowPlTLrQU2rqV5C5I14Aoaid3l8da3kbddibc/Wgk=
+github.com/gopacket/gopacket v1.7.3 h1:KTze+fpeKEaI7aWkJUL9Sq7r1b0zkcuBzTl5l0uPUh8=
+github.com/gopacket/gopacket v1.7.3/go.mod h1:QKowPlTLrQU2rqV5C5I14Aoaid3l8da3kbddibc/Wgk=
 github.com/graph-gophers/graphql-go v1.9.0 h1:yu0ucKHLc5qGpRwLYKIWtr9bOoxovkWasuBrPQwlHls=
 github.com/graph-gophers/graphql-go v1.9.0/go.mod h1:23olKZ7duEvHlF/2ELEoSZaY1aNPfShjP782SOoNTyM=
 github.com/hashicorp/go-cleanhttp v0.5.2 h1:035FKYIWjmULyFRBKPs8TBQoi0x6d9G4xc9neXJWAZQ=
