@@ -12,7 +12,7 @@ require (
 	github.com/charmbracelet/x/exp/golden v0.0.0-20241011142426-46044092ad91
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20260705004817-2cc9a8fe1146
 	github.com/creativeprojects/go-selfupdate v1.6.0
-	github.com/gopacket/gopacket v1.7.0
+	github.com/gopacket/gopacket v1.7.4
 	github.com/muesli/termenv v0.16.0
 )
 
